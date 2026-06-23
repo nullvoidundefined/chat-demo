@@ -14,15 +14,13 @@ exercised end to end).
 ## What changed
 
 - **Integration (Vitest, `src/__tests__/integration/`):** real internal wiring,
-  only the external boundary mocked.
-    - `chatRoute.integration.test.ts`: drives the real `POST /api/chat` through the
-      real agent loop, tool registry, tools, and Wikipedia client, mocking only the
-      Anthropic SDK (a scripted tool-use-then-answer stream) and `fetch`. Asserts the
-      SSE stream emits `tool_call -> tool_result -> text -> done` and that the real
-      client called `en.wikipedia.org`.
-    - `evalPipeline.integration.test.ts`: real `runDataset -> collectAgentRun ->
+  only the external boundary mocked. - `chatRoute.integration.test.ts`: drives the real `POST /api/chat` through the
+  real agent loop, tool registry, tools, and Wikipedia client, mocking only the
+  Anthropic SDK (a scripted tool-use-then-answer stream) and `fetch`. Asserts the
+  SSE stream emits `tool_call -> tool_result -> text -> done` and that the real
+  client called `en.wikipedia.org`. - `evalPipeline.integration.test.ts`: real `runDataset -> collectAgentRun ->
 runResearchAgent -> judgeResult -> writeReport`, SDK mocked, asserting a scored
-      result and report contents.
+  result and report contents.
 - **E2E (Playwright, `e2e/`):** a real chromium browser against the built prod
   server, intercepting `POST /api/chat` at the browser seam with a scripted SSE
   stream (the agent runs server-side, so the network seam is the clean mock point).
