@@ -1,12 +1,37 @@
 :root {
-    color-scheme: light dark;
+    /* Palette: cool paper base, indigo ink, manuscript-red accent. */
+    --page: #eef0f4;
+    --paper: #ffffff;
+    --ink: #1c2233;
+    --reader: #283655;
+    --reader-ink: #eef1f7;
+    --muted: #50596b;
+    --line: rgba(28, 34, 51, 0.1);
+    --accent: #b23a48;
+    --accent-strong: #93283a;
+
+    /* Type roles: ui for controls, read for the dossier, mono for the trail. */
+    --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-read: 'Iowan Old Style', 'Palatino Linotype', Palatino, Cambria, Georgia, serif;
+    --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
+
+    color-scheme: light;
 }
 
 * {
     box-sizing: border-box;
 }
 
+html,
+body {
+    height: 100%;
+}
+
 body {
     margin: 0;
-    font-family: system-ui, sans-serif;
+    background: radial-gradient(120% 80% at 50% -10%, #f6f7fa 0%, var(--page) 55%, #e7eaf0 100%);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }

@@ -1,23 +1,59 @@
 .user,
 .assistant {
-    padding: 0.75rem 1rem;
-    margin: 0.5rem 0;
-    border-radius: 0.5rem;
+    position: relative;
+    max-width: 90%;
+    padding: 0.85rem 1.1rem;
+    margin: 0.55rem 0;
+    border-radius: 0.9rem;
+    animation: rise 0.32s ease-out both;
 }
 
 .user {
-    background: #e8eef6;
+    align-self: flex-end;
+    background: var(--reader);
+    color: var(--reader-ink);
+    border-bottom-right-radius: 0.25rem;
 }
 
 .assistant {
-    background: #f4f1ea;
+    align-self: flex-start;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-bottom-left-radius: 0.25rem;
+    box-shadow: 0 6px 20px rgba(28, 34, 51, 0.06);
 }
 
 .text {
     margin: 0;
+    line-height: 1.6;
     white-space: pre-wrap;
 }
 
+.assistant .text {
+    font-family: var(--font-read);
+    font-size: 1.02rem;
+}
+
 .steps {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .user,
+    .assistant {
+        animation: none;
+    }
 }

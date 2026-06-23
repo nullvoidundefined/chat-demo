@@ -19,10 +19,22 @@ export function Chat() {
 
     return (
         <main className={styles.chat}>
+            <header className={styles.masthead}>
+                <p className={styles.eyebrow}>Research Desk</p>
+                <h1 className={styles.title}>The Reading Room</h1>
+                <p className={styles.tagline}>
+                    Ask for an overview or a dossier. I gather sources and show my work.
+                </p>
+            </header>
             <div className={styles.messages}>
-                {messages.map((message, index) => (
-                    <Message key={index} message={message} />
-                ))}
+                {messages.length === 0 ? (
+                    <p className={styles.empty}>
+                        Try asking for a high-level overview of the Rape of Nanking, or a dossier on
+                        Anthropic.
+                    </p>
+                ) : (
+                    messages.map((message, index) => <Message key={index} message={message} />)
+                )}
             </div>
             <form className={styles.form} onSubmit={handleSubmit}>
                 <label htmlFor="message" className={styles.label}>
@@ -35,7 +47,7 @@ export function Chat() {
                     onChange={(event) => setDraft(event.target.value)}
                     placeholder="Ask for an overview or a dossier..."
                 />
-                <button type="submit" disabled={isStreaming}>
+                <button type="submit" className={styles.send} disabled={isStreaming}>
                     Send
                 </button>
             </form>
