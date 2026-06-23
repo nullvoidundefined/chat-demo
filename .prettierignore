@@ -4,3 +4,6 @@ evals/reports/
 node_modules/
 # Next.js rewrites tsconfig.json on every build (its own 2-space format); it owns this file.
 tsconfig.json
+playwright-report/
+test-results/
+/blob-report/

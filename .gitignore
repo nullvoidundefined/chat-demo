@@ -9,3 +9,6 @@ evals/reports/
 *.tsbuildinfo
 next-env.d.ts
 .superpowers/
+playwright-report/
+test-results/
+/blob-report/
