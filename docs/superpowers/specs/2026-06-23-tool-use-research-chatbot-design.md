@@ -60,11 +60,13 @@ Out of scope (listed so the omissions are explicit, not silent):
 - Validation: Zod (judge structured output via `messages.parse` +
   `output_config.format`).
 - Tests: Vitest (unit/component). Playwright deferred.
-- Lint/format: copied from Doppelscript's web app: flat ESLint config
+- Lint: copied from Doppelscript's web app flat ESLint config
   (`next/core-web-vitals`, security, jsx-a11y, the "use SCSS modules not inline
-  styles" rule) and Prettier (2-space, 80-width, single-quote, import sort).
-  Note: this differs from the "4-space / 100-width" line in the shared
-  CLAUDE.md; the explicit instruction to copy Doppelscript's config wins.
+  styles" rule).
+- Format: Prettier follows the shared CLAUDE.md (4-space indent, 100-width,
+  trailing commas, single quotes). The shared CLAUDE.md always wins over a
+  project config; Doppelscript's conflicting 2-space/80-width values are not
+  carried over.
 
 ## Architecture
 
