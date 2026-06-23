@@ -113,7 +113,12 @@ function summarize(content: string): string {
         if (Array.isArray(parsed)) {
             return `${parsed.length} result(s)`;
         }
-        if (parsed && typeof parsed === 'object' && 'title' in parsed) {
+        if (
+            parsed &&
+            typeof parsed === 'object' &&
+            'title' in parsed &&
+            typeof (parsed as { title: unknown }).title === 'string'
+        ) {
             return `read "${(parsed as { title: string }).title}"`;
         }
     } catch {

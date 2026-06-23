@@ -2,7 +2,7 @@
 import { getWikipediaPage } from '@/clients/wikipedia/getWikipediaPage';
 import type { AgentTool } from '@/tools/agentTool';
 
-const getWikipediaArticle: AgentTool = {
+export const getWikipediaArticle: AgentTool = {
     schema: {
         name: 'get_wikipedia_article',
         description:
@@ -25,5 +25,3 @@ const getWikipediaArticle: AgentTool = {
         return JSON.stringify(page);
     },
 };
-
-export default getWikipediaArticle;

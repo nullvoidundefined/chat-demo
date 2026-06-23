@@ -5,7 +5,7 @@ import type { EvalResult } from '@/types/eval';
 const results: EvalResult[] = [
     {
         item: { id: 'q1', question: 'Q1', rubric: 'r' },
-        run: { finalAnswer: 'a', toolsUsed: ['search_wikipedia'], iterationCount: 1 },
+        run: { finalAnswer: 'a', toolsUsed: ['search_wikipedia'], toolCallCount: 1 },
         score: {
             factuality: 8,
             citationUse: 8,
@@ -17,7 +17,7 @@ const results: EvalResult[] = [
     },
     {
         item: { id: 'q2', question: 'Q2', rubric: 'r' },
-        run: { finalAnswer: 'b', toolsUsed: [], iterationCount: 1 },
+        run: { finalAnswer: 'b', toolsUsed: [], toolCallCount: 1 },
         score: {
             factuality: 4,
             citationUse: 4,

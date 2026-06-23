@@ -1,14 +1,14 @@
 {
-  "results": [
-    {
-      "title": "Anthropic",
-      "url": "https://www.anthropic.com",
-      "content": "Anthropic is an AI safety company founded in 2021."
-    },
-    {
-      "title": "Anthropic - Wikipedia",
-      "url": "https://en.wikipedia.org/wiki/Anthropic",
-      "content": "Anthropic PBC is an American AI startup."
-    }
-  ]
+    "results": [
+        {
+            "title": "Anthropic",
+            "url": "https://www.anthropic.com",
+            "content": "Anthropic is an AI safety company founded in 2021."
+        },
+        {
+            "title": "Anthropic - Wikipedia",
+            "url": "https://en.wikipedia.org/wiki/Anthropic",
+            "content": "Anthropic PBC is an American AI startup."
+        }
+    ]
 }

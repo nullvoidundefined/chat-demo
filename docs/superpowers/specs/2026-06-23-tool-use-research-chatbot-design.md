@@ -184,12 +184,12 @@ reimplementation:
 // TODO(future): migrate to an async generator (loop yields events, callers
 // `for await` them). Callback form chosen for readability in this teaching repo.
 export type AgentSink = {
-  onThinking: (delta: string) => void;
-  onText: (delta: string) => void;
-  onToolCall: (name: string, input: unknown) => void;
-  onToolResult: (name: string, summary: string) => void;
-  onDone: (finalText: string) => void;
-  onError: (message: string) => void;
+    onThinking: (delta: string) => void;
+    onText: (delta: string) => void;
+    onToolCall: (name: string, input: unknown) => void;
+    onToolResult: (name: string, summary: string) => void;
+    onDone: (finalText: string) => void;
+    onError: (message: string) => void;
 };
 ```
 
@@ -206,14 +206,14 @@ stateless and the conversation lives in React state).
 
 Response: one JSON object per SSE `data:` line, discriminated by `type`:
 
-| type          | payload              | UI effect                                  |
-| ------------- | -------------------- | ------------------------------------------ |
-| `thinking`    | `{ delta }`          | optional dim "thinking..." line            |
-| `text`        | `{ delta }`          | append to the answer bubble                |
-| `tool_call`   | `{ name, input }`    | render "Searching Wikipedia for X..." step |
-| `tool_result` | `{ name, summary }`  | mark that step done ("3 articles found")   |
-| `done`        | `{}`                 | finalize the turn                          |
-| `error`       | `{ message }`        | show error state                           |
+| type          | payload             | UI effect                                  |
+| ------------- | ------------------- | ------------------------------------------ |
+| `thinking`    | `{ delta }`         | optional dim "thinking..." line            |
+| `text`        | `{ delta }`         | append to the answer bubble                |
+| `tool_call`   | `{ name, input }`   | render "Searching Wikipedia for X..." step |
+| `tool_result` | `{ name, summary }` | mark that step done ("3 articles found")   |
+| `done`        | `{}`                | finalize the turn                          |
+| `error`       | `{ message }`       | show error state                           |
 
 `state/useChatStream.ts` reads the stream and maintains `messages` plus
 per-message `toolSteps[]`.

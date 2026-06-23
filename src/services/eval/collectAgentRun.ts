@@ -14,7 +14,7 @@ export async function collectAgentRun(
 ): Promise<EvalRunOutput> {
     const toolsUsed: string[] = [];
     let finalAnswer = '';
-    let iterationCount = 0;
+    let toolCallCount = 0;
 
     const sink: AgentSink = {
         onThinking: () => {},
@@ -23,7 +23,7 @@ export async function collectAgentRun(
         },
         onToolCall: (name) => {
             toolsUsed.push(name);
-            iterationCount += 1;
+            toolCallCount += 1;
         },
         onToolResult: () => {},
         onDone: (text) => {
@@ -40,5 +40,5 @@ export async function collectAgentRun(
         deps,
     });
 
-    return { finalAnswer, toolsUsed, iterationCount: Math.max(iterationCount, 1) };
+    return { finalAnswer, toolsUsed, toolCallCount };
 }

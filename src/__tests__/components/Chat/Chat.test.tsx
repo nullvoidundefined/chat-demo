@@ -21,8 +21,6 @@ describe('Chat', () => {
         fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
         expect(screen.getByText('Tell me about Anthropic')).toBeInTheDocument();
-        await waitFor(() =>
-            expect(screen.getByText('Hello from the agent.')).toBeInTheDocument(),
-        );
+        await waitFor(() => expect(screen.getByText('Hello from the agent.')).toBeInTheDocument());
     });
 });

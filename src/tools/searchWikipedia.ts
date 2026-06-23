@@ -4,7 +4,7 @@ import { searchWikipediaArticles } from '@/clients/wikipedia/searchWikipediaArti
 import { DEFAULT_SEARCH_LIMIT } from '@/constants/agent';
 import type { AgentTool } from '@/tools/agentTool';
 
-const searchWikipedia: AgentTool = {
+export const searchWikipedia: AgentTool = {
     schema: {
         name: 'search_wikipedia',
         description:
@@ -25,12 +25,7 @@ const searchWikipedia: AgentTool = {
         if (!query || !query.trim()) {
             throw new Error('search_wikipedia requires a non-empty query');
         }
-        const results = await searchWikipediaArticles(
-            query,
-            limit ?? DEFAULT_SEARCH_LIMIT,
-        );
+        const results = await searchWikipediaArticles(query, limit ?? DEFAULT_SEARCH_LIMIT);
         return JSON.stringify(results);
     },
 };
-
-export default searchWikipedia;

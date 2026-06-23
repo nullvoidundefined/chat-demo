@@ -8,7 +8,7 @@ vi.mock('@/clients/wikipedia/getWikipediaPage', () => ({
     })),
 }));
 
-import getWikipediaArticle from '@/tools/getWikipediaArticle';
+import { getWikipediaArticle } from '@/tools/getWikipediaArticle';
 import { getWikipediaPage } from '@/clients/wikipedia/getWikipediaPage';
 
 describe('getWikipediaArticle tool', () => {

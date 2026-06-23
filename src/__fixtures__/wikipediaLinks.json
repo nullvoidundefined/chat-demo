@@ -1,1 +1,34 @@
-{"continue":{"plcontinue":"6206236|0|Altimeter_Capital","continue":"||"},"query":{"pages":{"6206236":{"pageid":6206236,"ns":0,"title":"Anthropic","links":[{"ns":0,"title":"01.AI"},{"ns":0,"title":"15.ai"},{"ns":0,"title":"1X Technologies"},{"ns":0,"title":"2026 Iran war"},{"ns":0,"title":"2026 Minab school attack"},{"ns":0,"title":"2026 United States intervention in Venezuela"},{"ns":0,"title":"4Paradigm"},{"ns":0,"title":"ABKCO Records"},{"ns":0,"title":"AI21 Labs"},{"ns":0,"title":"AI agent"},{"ns":0,"title":"AI alignment"},{"ns":0,"title":"AI safety"},{"ns":0,"title":"AI slop"},{"ns":0,"title":"AI warfare"},{"ns":0,"title":"ARM Holdings"},{"ns":0,"title":"Adobe Firefly"},{"ns":0,"title":"Aidoc"},{"ns":0,"title":"Akamai Technologies"},{"ns":0,"title":"Aleph Alpha"},{"ns":0,"title":"Alphabet Inc."}]}}}}
+{
+    "continue": { "plcontinue": "6206236|0|Altimeter_Capital", "continue": "||" },
+    "query": {
+        "pages": {
+            "6206236": {
+                "pageid": 6206236,
+                "ns": 0,
+                "title": "Anthropic",
+                "links": [
+                    { "ns": 0, "title": "01.AI" },
+                    { "ns": 0, "title": "15.ai" },
+                    { "ns": 0, "title": "1X Technologies" },
+                    { "ns": 0, "title": "2026 Iran war" },
+                    { "ns": 0, "title": "2026 Minab school attack" },
+                    { "ns": 0, "title": "2026 United States intervention in Venezuela" },
+                    { "ns": 0, "title": "4Paradigm" },
+                    { "ns": 0, "title": "ABKCO Records" },
+                    { "ns": 0, "title": "AI21 Labs" },
+                    { "ns": 0, "title": "AI agent" },
+                    { "ns": 0, "title": "AI alignment" },
+                    { "ns": 0, "title": "AI safety" },
+                    { "ns": 0, "title": "AI slop" },
+                    { "ns": 0, "title": "AI warfare" },
+                    { "ns": 0, "title": "ARM Holdings" },
+                    { "ns": 0, "title": "Adobe Firefly" },
+                    { "ns": 0, "title": "Aidoc" },
+                    { "ns": 0, "title": "Akamai Technologies" },
+                    { "ns": 0, "title": "Aleph Alpha" },
+                    { "ns": 0, "title": "Alphabet Inc." }
+                ]
+            }
+        }
+    }
+}
