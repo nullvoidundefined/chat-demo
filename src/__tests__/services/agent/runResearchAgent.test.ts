@@ -75,11 +75,7 @@ describe('runResearchAgent', () => {
             sink,
             deps,
         });
-        expect(executeToolCall).toHaveBeenCalledWith(
-            'search_wikipedia',
-            { query: 'x' },
-            deps,
-        );
+        expect(executeToolCall).toHaveBeenCalledWith('search_wikipedia', { query: 'x' }, deps);
         expect(sink.onToolCall).toHaveBeenCalledWith('search_wikipedia', { query: 'x' });
         expect(sink.onToolResult).toHaveBeenCalled();
         expect(sink.onDone).toHaveBeenCalledWith('Done.');
@@ -109,8 +105,6 @@ describe('runResearchAgent', () => {
             sink,
             deps,
         });
-        expect(sink.onError).toHaveBeenCalledWith(
-            expect.stringMatching(/max.*iteration/i),
-        );
+        expect(sink.onError).toHaveBeenCalledWith(expect.stringMatching(/max.*iteration/i));
     });
 });

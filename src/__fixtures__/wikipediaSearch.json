@@ -1,1 +1,40 @@
-{"batchcomplete":"","continue":{"sroffset":3,"continue":"-||"},"query":{"searchinfo":{"totalhits":821,"suggestion":"anthropo","suggestionsnippet":"anthropo"},"search":[{"ns":0,"title":"Anthropic","pageid":6206236,"size":76652,"wordcount":6223,"snippet":"<span class=\"searchmatch\">Anthropic</span> PBC is an American artificial intelligence (AI) company headquartered in San Francisco, California. It has developed a series of large language","timestamp":"2026-06-23T08:04:12Z"},{"ns":0,"title":"Claude (AI)","pageid":75879512,"size":68023,"wordcount":6009,"snippet":"series of large language models developed by American software company <span class=\"searchmatch\">Anthropic</span>. Claude was released as an AI-based chatbot in March 2023. It is also","timestamp":"2026-06-22T21:04:50Z"},{"ns":0,"title":"Anthropic principle","pageid":2792,"size":77940,"wordcount":9813,"snippet":"In philosophy of science and cosmology, the <span class=\"searchmatch\">anthropic</span> principle (also known as the observation selection effect) is the proposition that the range of","timestamp":"2026-06-06T17:11:30Z"}]}}
+{
+    "batchcomplete": "",
+    "continue": { "sroffset": 3, "continue": "-||" },
+    "query": {
+        "searchinfo": {
+            "totalhits": 821,
+            "suggestion": "anthropo",
+            "suggestionsnippet": "anthropo"
+        },
+        "search": [
+            {
+                "ns": 0,
+                "title": "Anthropic",
+                "pageid": 6206236,
+                "size": 76652,
+                "wordcount": 6223,
+                "snippet": "<span class=\"searchmatch\">Anthropic</span> PBC is an American artificial intelligence (AI) company headquartered in San Francisco, California. It has developed a series of large language",
+                "timestamp": "2026-06-23T08:04:12Z"
+            },
+            {
+                "ns": 0,
+                "title": "Claude (AI)",
+                "pageid": 75879512,
+                "size": 68023,
+                "wordcount": 6009,
+                "snippet": "series of large language models developed by American software company <span class=\"searchmatch\">Anthropic</span>. Claude was released as an AI-based chatbot in March 2023. It is also",
+                "timestamp": "2026-06-22T21:04:50Z"
+            },
+            {
+                "ns": 0,
+                "title": "Anthropic principle",
+                "pageid": 2792,
+                "size": 77940,
+                "wordcount": 9813,
+                "snippet": "In philosophy of science and cosmology, the <span class=\"searchmatch\">anthropic</span> principle (also known as the observation selection effect) is the proposition that the range of",
+                "timestamp": "2026-06-06T17:11:30Z"
+            }
+        ]
+    }
+}

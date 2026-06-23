@@ -5,17 +5,14 @@ import { judgeResult } from '@/services/eval/judgeResult';
 import type { EvalItem, EvalRunOutput } from '@/types/eval';
 
 const scoreObject = JSON.parse(
-    readFileSync(
-        resolve(__dirname, '../../../__fixtures__/judgeResponse.json'),
-        'utf8',
-    ),
+    readFileSync(resolve(__dirname, '../../../__fixtures__/judgeResponse.json'), 'utf8'),
 ) as Record<string, unknown>;
 
 const item: EvalItem = { id: 'q1', question: 'Q', rubric: 'cover X and Y' };
 const run: EvalRunOutput = {
     finalAnswer: 'A',
     toolsUsed: ['search_wikipedia'],
-    iterationCount: 2,
+    toolCallCount: 2,
 };
 
 describe('judgeResult', () => {

@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/clients/tavily/searchWeb', () => ({
-    searchWeb: vi.fn(async () => [
-        { title: 'A', url: 'https://a.com', snippet: 's' },
-    ]),
+    searchWeb: vi.fn(async () => [{ title: 'A', url: 'https://a.com', snippet: 's' }]),
 }));
 
-import webSearch from '@/tools/webSearch';
+import { webSearch } from '@/tools/webSearch';
 import { searchWeb } from '@/clients/tavily/searchWeb';
 
 describe('webSearch tool', () => {

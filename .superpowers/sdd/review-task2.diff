@@ -1,0 +1,68 @@
+# Commits
+4b268e2 feat: add fail-fast server env config loader
+
+# Stat
+ src/__tests__/config/loadServerConfig.test.ts | 26 ++++++++++++++++++++++++++
+ src/config/loadServerConfig.ts                | 21 +++++++++++++++++++++
+ 2 files changed, 47 insertions(+)
+
+# Diff
+diff --git a/src/__tests__/config/loadServerConfig.test.ts b/src/__tests__/config/loadServerConfig.test.ts
+new file mode 100644
+index 0000000..575165b
+--- /dev/null
++++ b/src/__tests__/config/loadServerConfig.test.ts
+@@ -0,0 +1,26 @@
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++import { loadServerConfig } from '@/config/loadServerConfig';
++
++describe('loadServerConfig', () => {
++  const original = { ...process.env };
++
++  beforeEach(() => {
++    process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
++    process.env.TAVILY_API_KEY = 'tvly-test';
++  });
++  afterEach(() => {
++    process.env = { ...original };
++  });
++
++  it('returns both keys when present', () => {
++    expect(loadServerConfig()).toEqual({
++      anthropicApiKey: 'sk-ant-test',
++      tavilyApiKey: 'tvly-test',
++    });
++  });
++
++  it('throws naming the missing variable', () => {
++    delete process.env.TAVILY_API_KEY;
++    expect(() => loadServerConfig()).toThrow(/TAVILY_API_KEY/);
++  });
++});
+diff --git a/src/config/loadServerConfig.ts b/src/config/loadServerConfig.ts
+new file mode 100644
+index 0000000..9ccb79a
+--- /dev/null
++++ b/src/config/loadServerConfig.ts
+@@ -0,0 +1,21 @@
++/** Loads and validates server-only environment variables. Throws a clear
++ * error naming any missing variable so startup fails fast. */
++type ServerConfig = {
++  anthropicApiKey: string;
++  tavilyApiKey: string;
++};
++
++export function loadServerConfig(): ServerConfig {
++  const anthropicApiKey = requireEnv('ANTHROPIC_API_KEY');
++  const tavilyApiKey = requireEnv('TAVILY_API_KEY');
++
++  return { anthropicApiKey, tavilyApiKey };
++}
++
++function requireEnv(name: string): string {
++  const value = process.env[name];
++  if (!value) {
++    throw new Error(`Missing required environment variable: ${name}`);
++  }
++  return value;
++}

@@ -22,7 +22,7 @@ describe('collectAgentRun', () => {
         });
         expect(run.finalAnswer).toBe('Final answer.');
         expect(run.toolsUsed).toEqual(['search_wikipedia']);
-        expect(run.iterationCount).toBeGreaterThanOrEqual(1);
+        expect(run.toolCallCount).toBe(1);
     });
 
     it('returns empty toolsUsed when the agent answers without calling any tool', async () => {
@@ -37,6 +37,6 @@ describe('collectAgentRun', () => {
         });
         expect(run.finalAnswer).toBe('Direct answer.');
         expect(run.toolsUsed).toEqual([]);
-        expect(run.iterationCount).toBe(1);
+        expect(run.toolCallCount).toBe(0);
     });
 });

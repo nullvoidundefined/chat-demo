@@ -9,7 +9,7 @@ export type EvalItem = {
 export type EvalRunOutput = {
     finalAnswer: string;
     toolsUsed: string[];
-    iterationCount: number;
+    toolCallCount: number;
 };
 
 export type Score = {

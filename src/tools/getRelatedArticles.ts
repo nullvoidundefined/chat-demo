@@ -2,7 +2,7 @@
 import { getWikipediaPageLinks } from '@/clients/wikipedia/getWikipediaPageLinks';
 import type { AgentTool } from '@/tools/agentTool';
 
-const getRelatedArticles: AgentTool = {
+export const getRelatedArticles: AgentTool = {
     schema: {
         name: 'get_related_articles',
         description:
@@ -25,5 +25,3 @@ const getRelatedArticles: AgentTool = {
         return JSON.stringify(links);
     },
 };
-
-export default getRelatedArticles;

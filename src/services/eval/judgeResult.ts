@@ -34,7 +34,10 @@ export async function judgeResult(
         throw new Error('Judge returned no text content');
     }
 
-    const raw = textBlock.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    const raw = textBlock.text
+        .trim()
+        .replace(/^```(?:json)?\n?/, '')
+        .replace(/\n?```$/, '');
     const parsed: unknown = JSON.parse(raw);
 
     return ScoreSchema.parse(parsed);

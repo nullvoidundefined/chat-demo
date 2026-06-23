@@ -1,0 +1,119 @@
+# Commits
+ebbd733 fix: type fetch mock in Tavily test to satisfy strict tsc
+7938860 feat: add Tavily web-search client with fixture test
+
+# Stat
+ src/__fixtures__/tavilySearch.json             | 14 +++++++++
+ src/__tests__/clients/tavily/searchWeb.test.ts | 43 ++++++++++++++++++++++++++
+ src/clients/tavily/searchWeb.ts                | 33 ++++++++++++++++++++
+ 3 files changed, 90 insertions(+)
+
+# Diff
+diff --git a/src/__fixtures__/tavilySearch.json b/src/__fixtures__/tavilySearch.json
+new file mode 100644
+index 0000000..37f1f4b
+--- /dev/null
++++ b/src/__fixtures__/tavilySearch.json
+@@ -0,0 +1,14 @@
++{
++  "results": [
++    {
++      "title": "Anthropic",
++      "url": "https://www.anthropic.com",
++      "content": "Anthropic is an AI safety company founded in 2021."
++    },
++    {
++      "title": "Anthropic - Wikipedia",
++      "url": "https://en.wikipedia.org/wiki/Anthropic",
++      "content": "Anthropic PBC is an American AI startup."
++    }
++  ]
++}
+diff --git a/src/__tests__/clients/tavily/searchWeb.test.ts b/src/__tests__/clients/tavily/searchWeb.test.ts
+new file mode 100644
+index 0000000..b2ae95f
+--- /dev/null
++++ b/src/__tests__/clients/tavily/searchWeb.test.ts
+@@ -0,0 +1,43 @@
++import { readFileSync } from 'fs';
++import { resolve } from 'path';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import { searchWeb } from '@/clients/tavily/searchWeb';
++
++const fixture = JSON.parse(
++  readFileSync(
++    resolve(__dirname, '../../../__fixtures__/tavilySearch.json'),
++    'utf8',
++  ),
++);
++
++describe('searchWeb', () => {
++  beforeEach(() => {
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(fixture))),
++    );
++  });
++  afterEach(() => vi.unstubAllGlobals());
++
++  it('maps Tavily results to title/url/snippet', async () => {
++    const results = await searchWeb('Anthropic', 'tvly-test', 5);
++    expect(results[0]).toEqual({
++      title: 'Anthropic',
++      url: 'https://www.anthropic.com',
++      snippet: 'Anthropic is an AI safety company founded in 2021.',
++    });
++  });
++
++  it('sends the api key and query in the POST body', async () => {
++    const fetchMock = vi.fn(
++      async (_url: string, _init?: RequestInit) =>
++        new Response(JSON.stringify(fixture)),
++    );
++    vi.stubGlobal('fetch', fetchMock);
++    await searchWeb('test query', 'tvly-secret', 3);
++    const init = fetchMock.mock.calls[0]?.[1];
++    const body = JSON.parse(String(init?.body));
++    expect(body.api_key).toBe('tvly-secret');
++    expect(body.query).toBe('test query');
++  });
++});
+diff --git a/src/clients/tavily/searchWeb.ts b/src/clients/tavily/searchWeb.ts
+new file mode 100644
+index 0000000..02c8bc1
+--- /dev/null
++++ b/src/clients/tavily/searchWeb.ts
+@@ -0,0 +1,33 @@
++/** Calls the Tavily search API and maps results to title/url/snippet. The
++ * API key is passed in (read from server config) rather than read here. */
++
++const TAVILY_API = 'https://api.tavily.com/search';
++
++type WebResult = { title: string; url: string; snippet: string };
++
++export async function searchWeb(
++  query: string,
++  apiKey: string,
++  maxResults = 5,
++): Promise<WebResult[]> {
++  const response = await fetch(TAVILY_API, {
++    method: 'POST',
++    headers: { 'Content-Type': 'application/json' },
++    body: JSON.stringify({
++      api_key: apiKey,
++      query,
++      max_results: maxResults,
++    }),
++  });
++  if (!response.ok) {
++    throw new Error(`Tavily search failed: ${response.status}`);
++  }
++  const data = (await response.json()) as {
++    results?: { title: string; url: string; content: string }[];
++  };
++  return (data.results ?? []).map((result) => ({
++    title: result.title,
++    url: result.url,
++    snippet: result.content,
++  }));
++}

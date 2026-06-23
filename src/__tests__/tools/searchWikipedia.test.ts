@@ -6,7 +6,7 @@ vi.mock('@/clients/wikipedia/searchWikipediaArticles', () => ({
     ]),
 }));
 
-import searchWikipedia from '@/tools/searchWikipedia';
+import { searchWikipedia } from '@/tools/searchWikipedia';
 import { searchWikipediaArticles } from '@/clients/wikipedia/searchWikipediaArticles';
 
 describe('searchWikipedia tool', () => {
@@ -18,17 +18,14 @@ describe('searchWikipedia tool', () => {
     });
 
     it('calls the client and returns the results as a JSON string', async () => {
-        const out = await searchWikipedia.execute(
-            { query: 'Anthropic' },
-            { tavilyApiKey: 'x' },
-        );
+        const out = await searchWikipedia.execute({ query: 'Anthropic' }, { tavilyApiKey: 'x' });
         expect(searchWikipediaArticles).toHaveBeenCalledWith('Anthropic', 5);
         expect(JSON.parse(out)[0].title).toBe('Anthropic');
     });
 
     it('rejects empty query input', async () => {
-        await expect(
-            searchWikipedia.execute({ query: '' }, { tavilyApiKey: 'x' }),
-        ).rejects.toThrow(/query/);
+        await expect(searchWikipedia.execute({ query: '' }, { tavilyApiKey: 'x' })).rejects.toThrow(
+            /query/,
+        );
     });
 });

@@ -1,0 +1,267 @@
+# Commits
+c532691 feat: add chat UI components and wire the home page
+
+# Stat
+ src/__tests__/components/Chat/Chat.test.tsx  | 28 ++++++++++++++++++
+ src/app/page.tsx                             |  6 ++--
+ src/components/Chat/Chat.module.scss         | 34 +++++++++++++++++++++
+ src/components/Chat/Chat.tsx                 | 44 ++++++++++++++++++++++++++++
+ src/components/Message/Message.module.scss   | 23 +++++++++++++++
+ src/components/Message/Message.tsx           | 20 +++++++++++++
+ src/components/ToolStep/ToolStep.module.scss | 22 ++++++++++++++
+ src/components/ToolStep/ToolStep.tsx         | 26 ++++++++++++++++
+ 8 files changed, 201 insertions(+), 2 deletions(-)
+
+# Diff
+diff --git a/src/__tests__/components/Chat/Chat.test.tsx b/src/__tests__/components/Chat/Chat.test.tsx
+new file mode 100644
+index 0000000..660d995
+--- /dev/null
++++ b/src/__tests__/components/Chat/Chat.test.tsx
+@@ -0,0 +1,28 @@
++import { fireEvent, render, screen, waitFor } from '@testing-library/react';
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/api/streamChat', () => ({
++    streamChat: vi.fn(async (_messages, onEvent) => {
++        onEvent({ type: 'text', delta: 'Hello from the agent.' });
++        onEvent({ type: 'done' });
++    }),
++}));
++
++import { Chat } from '@/components/Chat/Chat';
++
++describe('Chat', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('sends input and renders the streamed answer', async () => {
++        render(<Chat />);
++        fireEvent.change(screen.getByLabelText(/message/i), {
++            target: { value: 'Tell me about Anthropic' },
++        });
++        fireEvent.click(screen.getByRole('button', { name: /send/i }));
++
++        expect(screen.getByText('Tell me about Anthropic')).toBeInTheDocument();
++        await waitFor(() =>
++            expect(screen.getByText('Hello from the agent.')).toBeInTheDocument(),
++        );
++    });
++});
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index fcfb1bd..b8c667d 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -1,4 +1,6 @@
+-/** Home page placeholder. Replaced by the full chat UI in a later task. */
++/** Home page: renders the Chat surface as the full-page entry point. */
++import { Chat } from '@/components/Chat/Chat';
++
+ export default function HomePage() {
+-    return <main>Chat coming soon</main>;
++    return <Chat />;
+ }
+diff --git a/src/components/Chat/Chat.module.scss b/src/components/Chat/Chat.module.scss
+new file mode 100644
+index 0000000..5d2c319
+--- /dev/null
++++ b/src/components/Chat/Chat.module.scss
+@@ -0,0 +1,34 @@
++.chat {
++    max-width: 48rem;
++    margin: 0 auto;
++    padding: 1rem;
++    display: flex;
++    flex-direction: column;
++    min-height: 100vh;
++}
++
++.messages {
++    flex: 1;
++    overflow-y: auto;
++}
++
++.form {
++    display: flex;
++    gap: 0.5rem;
++    align-items: center;
++    padding-top: 1rem;
++}
++
++.label {
++    position: absolute;
++    width: 1px;
++    height: 1px;
++    overflow: hidden;
++    clip: rect(0 0 0 0);
++}
++
++.input {
++    flex: 1;
++    padding: 0.5rem;
++    font-size: 1rem;
++}
+diff --git a/src/components/Chat/Chat.tsx b/src/components/Chat/Chat.tsx
+new file mode 100644
+index 0000000..f8c6acf
+--- /dev/null
++++ b/src/components/Chat/Chat.tsx
+@@ -0,0 +1,44 @@
++/** The chat surface: message list plus a labelled input that sends to the
++ * research agent and renders streamed answers and tool steps. */
++'use client';
++
++import { useState } from 'react';
++import { Message } from '@/components/Message/Message';
++import { useChatStream } from '@/state/useChatStream';
++import styles from './Chat.module.scss';
++
++export function Chat() {
++    const { messages, send, isStreaming } = useChatStream();
++    const [draft, setDraft] = useState('');
++
++    function handleSubmit(event: React.FormEvent) {
++        event.preventDefault();
++        send(draft);
++        setDraft('');
++    }
++
++    return (
++        <main className={styles.chat}>
++            <div className={styles.messages}>
++                {messages.map((message, index) => (
++                    <Message key={index} message={message} />
++                ))}
++            </div>
++            <form className={styles.form} onSubmit={handleSubmit}>
++                <label htmlFor="message" className={styles.label}>
++                    Message
++                </label>
++                <input
++                    id="message"
++                    className={styles.input}
++                    value={draft}
++                    onChange={(event) => setDraft(event.target.value)}
++                    placeholder="Ask for an overview or a dossier..."
++                />
++                <button type="submit" disabled={isStreaming}>
++                    Send
++                </button>
++            </form>
++        </main>
++    );
++}
+diff --git a/src/components/Message/Message.module.scss b/src/components/Message/Message.module.scss
+new file mode 100644
+index 0000000..801265a
+--- /dev/null
++++ b/src/components/Message/Message.module.scss
+@@ -0,0 +1,23 @@
++.user,
++.assistant {
++    padding: 0.75rem 1rem;
++    margin: 0.5rem 0;
++    border-radius: 0.5rem;
++}
++
++.user {
++    background: #e8eef6;
++}
++
++.assistant {
++    background: #f4f1ea;
++}
++
++.text {
++    margin: 0;
++    white-space: pre-wrap;
++}
++
++.steps {
++    margin-bottom: 0.5rem;
++}
+diff --git a/src/components/Message/Message.tsx b/src/components/Message/Message.tsx
+new file mode 100644
+index 0000000..78d06c0
+--- /dev/null
++++ b/src/components/Message/Message.tsx
+@@ -0,0 +1,20 @@
++/** Renders a single chat message: tool steps (for assistant turns) followed
++ * by the message text. */
++import { ToolStep } from '@/components/ToolStep/ToolStep';
++import type { DisplayMessage } from '@/state/useChatStream';
++import styles from './Message.module.scss';
++
++export function Message({ message }: { message: DisplayMessage }) {
++    return (
++        <div className={styles[message.role]}>
++            {message.toolSteps.length > 0 ? (
++                <div className={styles.steps}>
++                    {message.toolSteps.map((step, index) => (
++                        <ToolStep key={index} step={step} />
++                    ))}
++                </div>
++            ) : null}
++            <p className={styles.text}>{message.content}</p>
++        </div>
++    );
++}
+diff --git a/src/components/ToolStep/ToolStep.module.scss b/src/components/ToolStep/ToolStep.module.scss
+new file mode 100644
+index 0000000..b6daf6d
+--- /dev/null
++++ b/src/components/ToolStep/ToolStep.module.scss
+@@ -0,0 +1,22 @@
++.step {
++    display: flex;
++    gap: 0.5rem;
++    align-items: baseline;
++    font-size: 0.85rem;
++    padding: 0.25rem 0.5rem;
++    border-left: 2px solid #888;
++    margin: 0.25rem 0;
++}
++
++.name {
++    font-weight: 600;
++}
++
++.input {
++    font-style: italic;
++}
++
++.summary {
++    color: #666;
++    margin-left: auto;
++}
+diff --git a/src/components/ToolStep/ToolStep.tsx b/src/components/ToolStep/ToolStep.tsx
+new file mode 100644
+index 0000000..a3d5b7f
+--- /dev/null
++++ b/src/components/ToolStep/ToolStep.tsx
+@@ -0,0 +1,26 @@
++/** Renders one agent tool-use step: the tool name, its input, and a result
++ * summary once available. */
++import type { ToolStep as ToolStepData } from '@/types/chat';
++import styles from './ToolStep.module.scss';
++
++export function ToolStep({ step }: { step: ToolStepData }) {
++    const label = describeInput(step.input);
++    return (
++        <div className={styles.step}>
++            <span className={styles.name}>{step.name}</span>
++            {label ? <span className={styles.input}>{label}</span> : null}
++            <span className={styles.summary}>{step.summary ?? 'running...'}</span>
++        </div>
++    );
++}
++
++function describeInput(input: unknown): string {
++    if (input && typeof input === 'object') {
++        const record = input as Record<string, unknown>;
++        const value = record.query ?? record.title;
++        if (typeof value === 'string') {
++            return value;
++        }
++    }
++    return '';
++}

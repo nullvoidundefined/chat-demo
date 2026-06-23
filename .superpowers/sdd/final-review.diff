@@ -1,0 +1,2803 @@
+# Branch: feat/tool-use-research-chatbot
+# Commits
+4e1d952 docs: add README and project overview
+163ebb0 fix: harden eval judge (guard missing text, strip fences) and narrow report axis types
+43fc69c fix: make eval judge use messages.create + JSON parse (SDK 0.70 has no messages.parse)
+94be901 feat: add eval harness (judge, collector, report, runner, dataset)
+eafe253 fix: complete visually-hidden label, label tool steps, guard empty message paragraph
+fcc7dab fix: repair ESLint flat config so npm run lint runs (react plugin double-registration)
+c532691 feat: add chat UI components and wire the home page
+edf328c feat: add browser SSE client and useChatStream hook
+d283700 feat: add /api/chat SSE route streaming agent events
+208309d feat: add agent sink, SSE encoder, and the tool-use research loop
+5d55699 test: add negative-input coverage for article and related-articles tools
+3b62e52 feat: add Anthropic client, four agent tools, registry, and executeToolCall
+ebbd733 fix: type fetch mock in Tavily test to satisfy strict tsc
+7938860 feat: add Tavily web-search client with fixture test
+4de033f test: cover truncated=false path for short Wikipedia extracts
+f2399bc feat: add Wikipedia REST client functions with fixture tests
+4b268e2 feat: add fail-fast server env config loader
+b13344b chore: gitignore build artifacts (tsbuildinfo, next-env.d.ts, sdd scratch)
+5d61dd0 chore: scaffold Next.js app, configs, constants, and types
+
+# Stat (excluding package-lock.json)
+ .env.example                                       |   2 +
+ .gitignore                                         |   3 +
+ README.md                                          |  42 +++++
+ eslint.config.mjs                                  | 169 +++++++++++++++++++++
+ evals/dataset.jsonl                                |  12 ++
+ evals/runEval.ts                                   |  42 +++++
+ next.config.ts                                     |   5 +
+ package.json                                       |  51 +++++++
+ prettier.config.mjs                                |  12 ++
+ src/__fixtures__/judgeResponse.json                |   8 +
+ src/__fixtures__/tavilySearch.json                 |  14 ++
+ src/__fixtures__/wikipediaLinks.json               |   1 +
+ src/__fixtures__/wikipediaPage.json                |   1 +
+ src/__fixtures__/wikipediaSearch.json              |   1 +
+ src/__tests__/app/api/chat/route.test.ts           |  55 +++++++
+ src/__tests__/clients/tavily/searchWeb.test.ts     |  43 ++++++
+ .../clients/wikipedia/getWikipediaPage.test.ts     |  59 +++++++
+ .../wikipedia/getWikipediaPageLinks.test.ts        |  28 ++++
+ .../wikipedia/searchWikipediaArticles.test.ts      |  34 +++++
+ src/__tests__/components/Chat/Chat.test.tsx        |  28 ++++
+ src/__tests__/config/loadServerConfig.test.ts      |  26 ++++
+ .../services/agent/executeToolCall.test.ts         |  35 +++++
+ .../services/agent/runResearchAgent.test.ts        | 116 ++++++++++++++
+ .../services/eval/collectAgentRun.test.ts          |  42 +++++
+ src/__tests__/services/eval/judgeResult.test.ts    |  46 ++++++
+ src/__tests__/services/eval/writeReport.test.ts    |  44 ++++++
+ src/__tests__/services/sse/encodeSseEvent.test.ts  |  14 ++
+ src/__tests__/setup.ts                             |   1 +
+ src/__tests__/state/useChatStream.test.tsx         |  34 +++++
+ src/__tests__/tools/getRelatedArticles.test.ts     |  32 ++++
+ src/__tests__/tools/getWikipediaArticle.test.ts    |  36 +++++
+ src/__tests__/tools/searchWikipedia.test.ts        |  34 +++++
+ src/__tests__/tools/webSearch.test.ts              |  25 +++
+ src/api/streamChat.ts                              |  35 +++++
+ src/app/api/chat/route.ts                          |  68 +++++++++
+ src/app/globals.scss                               |  12 ++
+ src/app/layout.tsx                                 |  14 ++
+ src/app/page.tsx                                   |   6 +
+ src/clients/anthropic/createAnthropicClient.ts     |   6 +
+ src/clients/tavily/searchWeb.ts                    |  33 ++++
+ src/clients/wikipedia/getWikipediaPage.ts          |  56 +++++++
+ src/clients/wikipedia/getWikipediaPageLinks.ts     |  26 ++++
+ src/clients/wikipedia/searchWikipediaArticles.ts   |  35 +++++
+ src/components/Chat/Chat.module.scss               |  36 +++++
+ src/components/Chat/Chat.tsx                       |  44 ++++++
+ src/components/Message/Message.module.scss         |  23 +++
+ src/components/Message/Message.tsx                 |  20 +++
+ src/components/ToolStep/ToolStep.module.scss       |  22 +++
+ src/components/ToolStep/ToolStep.tsx               |  26 ++++
+ src/config/loadServerConfig.ts                     |  21 +++
+ src/constants/agent.ts                             |   4 +
+ src/constants/models.ts                            |   6 +
+ src/prompts/judgePrompt.ts                         |  15 ++
+ src/prompts/researchSystemPrompt.ts                |  15 ++
+ src/services/agent/agentSink.ts                    |  13 ++
+ src/services/agent/executeToolCall.ts              |  24 +++
+ src/services/agent/runResearchAgent.ts             | 123 +++++++++++++++
+ src/services/agent/toolRegistry.ts                 |  19 +++
+ src/services/eval/collectAgentRun.ts               |  44 ++++++
+ src/services/eval/judgeResult.ts                   |  41 +++++
+ src/services/eval/scoreSchema.ts                   |  11 ++
+ src/services/eval/writeReport.ts                   |  54 +++++++
+ src/services/sse/encodeSseEvent.ts                 |   6 +
+ src/state/useChatStream.ts                         |  87 +++++++++++
+ src/tools/agentTool.ts                             |  10 ++
+ src/tools/getRelatedArticles.ts                    |  29 ++++
+ src/tools/getWikipediaArticle.ts                   |  29 ++++
+ src/tools/searchWikipedia.ts                       |  36 +++++
+ src/tools/webSearch.ts                             |  30 ++++
+ src/types/chat.ts                                  |  21 +++
+ src/types/eval.ts                                  |  28 ++++
+ tsconfig.json                                      |  20 +++
+ vitest.config.ts                                   |  13 ++
+ 73 files changed, 2256 insertions(+)
+
+# Diff (excluding package-lock.json)
+diff --git a/.env.example b/.env.example
+new file mode 100644
+index 0000000..7ad7293
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,2 @@
++ANTHROPIC_API_KEY=
++TAVILY_API_KEY=
+diff --git a/.gitignore b/.gitignore
+index c79d839..1fe56ce 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,8 +1,11 @@
+ node_modules/
+ .next/
+ out/
+ build/
+ .env
+ .env.local
+ evals/reports/
+ *.log
++*.tsbuildinfo
++next-env.d.ts
++.superpowers/
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..fe5d99f
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,42 @@
++# Research Chatbot (educational MVP)
++
++A streaming, tool-using research chatbot with an offline LLM-judge eval harness.
++Built to demonstrate a modern agent loop with measurable quality.
++
++## What it does
++
++Ask for an overview or a dossier ("overview of the Rape of Nanking", "dossier on
++Anthropic"). The agent calls Wikipedia and web-search tools, shows each step
++live, and writes a cited synthesis.
++
++## Setup
++
++1. `npm install`
++2. Copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY` and
++   `TAVILY_API_KEY`.
++3. `npm run dev` and open http://localhost:3000
++
++## Architecture
++
++- `src/services/agent/runResearchAgent.ts` - the tool-use loop. Emits events to
++  an `AgentSink`; the chat route supplies an SSE sink, the eval harness a
++  collecting sink, so both exercise the same agent.
++- `src/tools/` - the four custom tools (schema + execute).
++- `src/clients/` - thin provider wrappers (Wikipedia REST, Tavily, Anthropic).
++- `src/services/eval/` - the offline judge harness.
++
++## Models
++
++`src/constants/models.ts` sets `AGENT_MODEL` and `JUDGE_MODEL` (both
++`claude-opus-4-8`). Switch `AGENT_MODEL` to `claude-sonnet-4-6` to cut eval cost.
++
++## Evals
++
++`npm run eval` runs the agent over `evals/dataset.jsonl`, judges each answer, and
++writes `evals/reports/report.md` and `report.json`. Scores come from an LLM judge
++and are directional, not exact.
++
++## Tests
++
++`npm test` runs the Vitest suite (unit, client fixtures, agent loop, route, hook,
++components, eval). No live API calls in tests.
+diff --git a/eslint.config.mjs b/eslint.config.mjs
+new file mode 100644
+index 0000000..1bf43d3
+--- /dev/null
++++ b/eslint.config.mjs
+@@ -0,0 +1,169 @@
++/**
++ * ESLint flat config for chat-demo (Next.js / TypeScript).
++ *
++ * next/core-web-vitals is a flat config array and is spread directly -- no FlatCompat needed.
++ * It already registers react, react-hooks, jsx-a11y, import, @next/next, and @typescript-eslint
++ * plugins. Those plugins must not be re-registered here with different object references or ESLint
++ * will error on conflicting plugin definitions. Rule overrides use the plugin namespace string keys
++ * without touching plugin registration.
++ */
++import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
++import eslintConfigPrettier from 'eslint-config-prettier';
++import security from 'eslint-plugin-security';
++import unusedImports from 'eslint-plugin-unused-imports';
++import globals from 'globals';
++import tseslint from 'typescript-eslint';
++
++export default tseslint.config([
++    {
++        ignores: [
++            'node_modules',
++            '.next',
++            'out',
++            'build',
++            'public/**',
++            '**/*.d.ts',
++            '**/*.stories.ts',
++            '**/*.stories.tsx',
++        ],
++    },
++    // next/core-web-vitals is already a flat config array; spread directly.
++    // It brings: react, react-hooks, jsx-a11y, import, @next/next, @typescript-eslint plugins.
++    ...nextCoreWebVitals,
++    {
++        linterOptions: {
++            reportUnusedDisableDirectives: true,
++        },
++        extends: [security.configs.recommended],
++        plugins: {
++            security,
++            'unused-imports': unusedImports,
++        },
++        rules: {
++            curly: 'error',
++            'import/no-anonymous-default-export': 'off',
++            'no-console': ['warn', { allow: ['warn', 'info', 'error', 'group'] }],
++            'no-implicit-globals': 'error',
++            'no-param-reassign': ['error', { props: false }],
++            'no-shadow': 'warn',
++            'no-undef': 'error',
++            'no-underscore-dangle': 'off',
++            'no-unreachable': 'warn',
++            'no-unused-expressions': 'error',
++            'no-useless-escape': 'off',
++            'no-var': 'warn',
++            'object-shorthand': ['error', 'always'],
++            'prefer-const': 'warn',
++            'security/detect-eval-with-expression': 'warn',
++            'security/detect-non-literal-fs-filename': 'warn',
++            'security/detect-non-literal-regexp': 'warn',
++            'security/detect-non-literal-require': 'warn',
++            'security/detect-object-injection': 'off',
++            'security/detect-possible-timing-attacks': 'warn',
++            'unused-imports/no-unused-imports': 'warn',
++        },
++    },
++    {
++        files: ['**/*.ts', '**/*.tsx'],
++        languageOptions: {
++            ecmaVersion: 'latest',
++            parserOptions: {
++                ecmaFeatures: { jsx: true },
++                ecmaVersion: 'latest',
++                project: ['./tsconfig.json'],
++                sourceType: 'module',
++            },
++        },
++        // Do NOT re-register react, react-hooks, or jsx-a11y here -- they are already
++        // registered by nextCoreWebVitals above. Re-registering with different instances
++        // causes ESLint to throw a conflicting plugin definition error.
++        settings: {
++            react: { version: 'detect' },
++        },
++        rules: {
++            '@typescript-eslint/ban-ts-comment': [
++                'warn',
++                { 'ts-ignore': 'allow-with-description' },
++            ],
++            '@typescript-eslint/consistent-type-definitions': 'off',
++            '@typescript-eslint/consistent-type-imports': [
++                'warn',
++                { fixStyle: 'inline-type-imports', prefer: 'type-imports' },
++            ],
++            '@typescript-eslint/no-empty-object-type': 'warn',
++            '@typescript-eslint/no-explicit-any': 'warn',
++            '@typescript-eslint/no-floating-promises': 'warn',
++            '@typescript-eslint/no-misused-promises': [
++                'warn',
++                { checksVoidReturn: { attributes: false } },
++            ],
++            '@typescript-eslint/no-require-imports': 'warn',
++            '@typescript-eslint/no-unsafe-assignment': 'warn',
++            '@typescript-eslint/no-unused-expressions': 'warn',
++            '@typescript-eslint/no-unused-vars': [
++                'warn',
++                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
++            ],
++            '@typescript-eslint/require-await': 'off',
++            'no-undef': 'off',
++            'jsx-a11y/anchor-is-valid': 'warn',
++            'jsx-a11y/click-events-have-key-events': 'off',
++            'jsx-a11y/iframe-has-title': 'off',
++            'jsx-a11y/interactive-supports-focus': 'off',
++            'jsx-a11y/no-autofocus': 'warn',
++            'jsx-a11y/no-noninteractive-element-interactions': 'off',
++            'jsx-a11y/no-static-element-interactions': 'off',
++            'no-var': 'warn',
++            'prefer-const': 'warn',
++            'react-hooks/exhaustive-deps': 'warn',
++            'react-hooks/rules-of-hooks': 'warn',
++            'react/display-name': 'warn',
++            'react/forbid-dom-props': [
++                'error',
++                {
++                    forbid: [
++                        {
++                            message:
++                                'Use SCSS modules for static styles. For runtime-driven values, set a CSS custom property or add eslint-disable-next-line with justification.',
++                            propName: 'style',
++                        },
++                    ],
++                },
++            ],
++            'react/jsx-curly-brace-presence': ['error', 'never'],
++            'react/no-unescaped-entities': 'warn',
++            'react/prop-types': 'off',
++            'react/react-in-jsx-scope': 'off',
++            'unused-imports/no-unused-vars': [
++                'warn',
++                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
++            ],
++        },
++    },
++    {
++        files: [
++            '**/__tests__/**',
++            '**/__mocks__/**',
++            '**/tests/**',
++            '**/*.test.ts',
++            '**/*.test.tsx',
++        ],
++        languageOptions: {
++            globals: { ...globals.vitest },
++        },
++        rules: {
++            '@typescript-eslint/no-explicit-any': 'off',
++            '@typescript-eslint/no-unsafe-assignment': 'off',
++            'no-console': 'off',
++            'security/detect-non-literal-regexp': 'off',
++        },
++    },
++    {
++        files: ['**/opengraph-image.tsx'],
++        rules: {
++            // Next.js ImageResponse only accepts inline styles.
++            'react/forbid-dom-props': 'off',
++        },
++    },
++    eslintConfigPrettier,
++]);
+diff --git a/evals/dataset.jsonl b/evals/dataset.jsonl
+new file mode 100644
+index 0000000..4fdb72d
+--- /dev/null
++++ b/evals/dataset.jsonl
+@@ -0,0 +1,12 @@
++{"id":"nanking","question":"Give me a high-level overview of the Rape of Nanking.","rubric":"Covers what happened, when (1937-1938), where (Nanjing), who (Imperial Japanese Army), and scale; cites Wikipedia.","referenceFacts":["Occurred in Nanjing in 1937-1938","Perpetrated by the Imperial Japanese Army during the Second Sino-Japanese War"]}
++{"id":"anthropic","question":"Build a short dossier on the company Anthropic.","rubric":"Covers founding year, founders, what the company does, and a notable product; cites sources.","referenceFacts":["Founded in 2021","Develops the Claude family of AI models"]}
++{"id":"photosynthesis","question":"Explain photosynthesis at a high level.","rubric":"Covers inputs (light, water, CO2), outputs (glucose, oxygen), and where it happens (chloroplasts).","referenceFacts":["Converts light energy into chemical energy","Produces oxygen as a byproduct"]}
++{"id":"black-holes","question":"What are black holes and how do they form?","rubric":"Covers definition, formation from stellar collapse, event horizon, and Hawking radiation; cites sources.","referenceFacts":["Form from the collapse of massive stars","Have an event horizon beyond which nothing can escape"]}
++{"id":"french-revolution","question":"Give an overview of the French Revolution.","rubric":"Covers causes, key events (Bastille, Reign of Terror), outcomes, and dates (1789-1799); cites Wikipedia.","referenceFacts":["Began in 1789","Led to the abolition of the French monarchy"]}
++{"id":"dna","question":"Explain the structure and function of DNA.","rubric":"Covers double helix, nucleotides, base pairs (A-T, G-C), and role in heredity; cites sources.","referenceFacts":["Double helix structure discovered by Watson and Crick in 1953","Carries genetic information"]}
++{"id":"internet-history","question":"Give a brief history of the internet.","rubric":"Covers ARPANET origins, TCP/IP, WWW invention by Berners-Lee, and commercialization; cites Wikipedia.","referenceFacts":["Originated from ARPANET in the 1960s","World Wide Web invented by Tim Berners-Lee in 1989"]}
++{"id":"climate-change","question":"Explain the main causes and effects of climate change.","rubric":"Covers greenhouse gases, fossil fuels, rising temperatures, sea level rise, and extreme weather; cites sources.","referenceFacts":["Primarily caused by burning fossil fuels","Results in global average temperature increases"]}
++{"id":"moon-landing","question":"Describe the Apollo 11 moon landing.","rubric":"Covers mission date, astronauts (Armstrong, Aldrin, Collins), first steps, and significance; cites Wikipedia.","referenceFacts":["July 20, 1969","Neil Armstrong was the first human to walk on the Moon"]}
++{"id":"shakespeare","question":"Who was William Shakespeare and what is he known for?","rubric":"Covers birth/death dates, birthplace (Stratford-upon-Avon), major works, and influence on English literature; cites sources.","referenceFacts":["Born in 1564 in Stratford-upon-Avon","Wrote approximately 37 plays and 154 sonnets"]}
++{"id":"bitcoin","question":"Give a high-level overview of Bitcoin.","rubric":"Covers invention by Satoshi Nakamoto (2008), blockchain, proof-of-work, and its use as a currency; cites Wikipedia.","referenceFacts":["Created by Satoshi Nakamoto in 2008","Uses a decentralized blockchain ledger"]}
++{"id":"penicillin","question":"How was penicillin discovered and why is it important?","rubric":"Covers Alexander Fleming's 1928 discovery, antibiotic mechanism, and impact on medicine; cites Wikipedia.","referenceFacts":["Discovered by Alexander Fleming in 1928","First widely used antibiotic, saving millions of lives"]}
+diff --git a/evals/runEval.ts b/evals/runEval.ts
+new file mode 100644
+index 0000000..ff8c8c6
+--- /dev/null
++++ b/evals/runEval.ts
+@@ -0,0 +1,42 @@
++/** Offline eval entry point: loads the dataset, runs the agent per question,
++ * judges each result, and writes report.md and report.json. */
++import { mkdirSync, readFileSync, writeFileSync } from 'fs';
++import { resolve } from 'path';
++import { createAnthropicClient } from '../src/clients/anthropic/createAnthropicClient';
++import { loadServerConfig } from '../src/config/loadServerConfig';
++import { collectAgentRun } from '../src/services/eval/collectAgentRun';
++import { judgeResult } from '../src/services/eval/judgeResult';
++import { writeReport } from '../src/services/eval/writeReport';
++import type { EvalItem, EvalResult } from '../src/types/eval';
++
++async function main(): Promise<void> {
++    const { anthropicApiKey, tavilyApiKey } = loadServerConfig();
++    const client = createAnthropicClient(anthropicApiKey);
++    const deps = { tavilyApiKey };
++    const items = loadDataset();
++
++    const results: EvalResult[] = [];
++    for (const item of items) {
++        process.stdout.write(`Running ${item.id}...\n`);
++        const run = await collectAgentRun(item.question, { client, deps });
++        const score = await judgeResult(item, run, client);
++        results.push({ item, run, score });
++    }
++
++    const { markdown, json } = writeReport(results);
++    const outDir = resolve(import.meta.dirname, 'reports');
++    mkdirSync(outDir, { recursive: true });
++    writeFileSync(resolve(outDir, 'report.md'), markdown);
++    writeFileSync(resolve(outDir, 'report.json'), json);
++    process.stdout.write(`Wrote ${results.length} results to ${outDir}\n`);
++}
++
++function loadDataset(): EvalItem[] {
++    const path = resolve(import.meta.dirname, 'dataset.jsonl');
++    return readFileSync(path, 'utf8')
++        .split('\n')
++        .filter((line) => line.trim())
++        .map((line) => JSON.parse(line) as EvalItem);
++}
++
++void main();
+diff --git a/next.config.ts b/next.config.ts
+new file mode 100644
+index 0000000..b22af96
+--- /dev/null
++++ b/next.config.ts
+@@ -0,0 +1,5 @@
++import type { NextConfig } from 'next';
++
++const nextConfig: NextConfig = {};
++
++export default nextConfig;
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..014c33d
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,51 @@
++{
++    "name": "chat-demo",
++    "version": "0.1.0",
++    "private": true,
++    "type": "module",
++    "engines": { "node": "24.x" },
++    "scripts": {
++        "dev": "next dev -p 3000",
++        "build": "next build",
++        "start": "next start -p 3000",
++        "lint": "eslint .",
++        "format": "prettier --write '**/*.{ts,tsx,mjs,scss,md}'",
++        "test": "vitest run",
++        "test:watch": "vitest",
++        "eval": "tsx evals/runEval.ts"
++    },
++    "dependencies": {
++        "@anthropic-ai/sdk": "^0.70.0",
++        "@radix-ui/react-scroll-area": "^1.2.0",
++        "next": "^16.0.0",
++        "react": "^19.0.0",
++        "react-dom": "^19.0.0",
++        "zod": "^3.24.0"
++    },
++    "devDependencies": {
++        "@eslint/eslintrc": "^3.0.0",
++        "@testing-library/react": "^16.1.0",
++        "@testing-library/jest-dom": "^6.6.0",
++        "@types/node": "^24.0.0",
++        "@types/react": "^19.0.0",
++        "@types/react-dom": "^19.0.0",
++        "@typescript-eslint/parser": "^8.0.0",
++        "@vitejs/plugin-react": "^4.7.0",
++        "eslint": "^9.0.0",
++        "eslint-config-next": "^16.0.0",
++        "eslint-config-prettier": "^10.0.0",
++        "eslint-plugin-jsx-a11y": "^6.10.0",
++        "eslint-plugin-react": "^7.37.0",
++        "eslint-plugin-react-hooks": "^5.0.0",
++        "eslint-plugin-security": "^3.0.0",
++        "eslint-plugin-unused-imports": "^4.0.0",
++        "globals": "^16.0.0",
++        "jsdom": "^25.0.0",
++        "prettier": "^3.8.0",
++        "sass": "^1.80.0",
++        "tsx": "^4.19.0",
++        "typescript": "^5.7.0",
++        "typescript-eslint": "^8.0.0",
++        "vitest": "^3.0.0"
++    }
++}
+diff --git a/prettier.config.mjs b/prettier.config.mjs
+new file mode 100644
+index 0000000..1f524bf
+--- /dev/null
++++ b/prettier.config.mjs
+@@ -0,0 +1,12 @@
++// Prettier config. Formatting follows the shared CLAUDE.md: 4-space indent,
++// 100 print width, trailing commas. Shared CLAUDE.md overrides project config.
++export default {
++    arrowParens: 'always',
++    bracketSpacing: true,
++    printWidth: 100,
++    semi: true,
++    singleQuote: true,
++    tabWidth: 4,
++    trailingComma: 'all',
++    useTabs: false,
++};
+diff --git a/src/__fixtures__/judgeResponse.json b/src/__fixtures__/judgeResponse.json
+new file mode 100644
+index 0000000..308ee3d
+--- /dev/null
++++ b/src/__fixtures__/judgeResponse.json
+@@ -0,0 +1,8 @@
++{
++    "factuality": 8,
++    "citationUse": 7,
++    "completeness": 9,
++    "toolEfficiency": 8,
++    "rationale": "Accurate and well cited; minor gaps on dates.",
++    "pass": true
++}
+diff --git a/src/__fixtures__/tavilySearch.json b/src/__fixtures__/tavilySearch.json
+new file mode 100644
+index 0000000..37f1f4b
+--- /dev/null
++++ b/src/__fixtures__/tavilySearch.json
+@@ -0,0 +1,14 @@
++{
++  "results": [
++    {
++      "title": "Anthropic",
++      "url": "https://www.anthropic.com",
++      "content": "Anthropic is an AI safety company founded in 2021."
++    },
++    {
++      "title": "Anthropic - Wikipedia",
++      "url": "https://en.wikipedia.org/wiki/Anthropic",
++      "content": "Anthropic PBC is an American AI startup."
++    }
++  ]
++}
+diff --git a/src/__fixtures__/wikipediaLinks.json b/src/__fixtures__/wikipediaLinks.json
+new file mode 100644
+index 0000000..cac55ab
+--- /dev/null
++++ b/src/__fixtures__/wikipediaLinks.json
+@@ -0,0 +1 @@
++{"continue":{"plcontinue":"6206236|0|Altimeter_Capital","continue":"||"},"query":{"pages":{"6206236":{"pageid":6206236,"ns":0,"title":"Anthropic","links":[{"ns":0,"title":"01.AI"},{"ns":0,"title":"15.ai"},{"ns":0,"title":"1X Technologies"},{"ns":0,"title":"2026 Iran war"},{"ns":0,"title":"2026 Minab school attack"},{"ns":0,"title":"2026 United States intervention in Venezuela"},{"ns":0,"title":"4Paradigm"},{"ns":0,"title":"ABKCO Records"},{"ns":0,"title":"AI21 Labs"},{"ns":0,"title":"AI agent"},{"ns":0,"title":"AI alignment"},{"ns":0,"title":"AI safety"},{"ns":0,"title":"AI slop"},{"ns":0,"title":"AI warfare"},{"ns":0,"title":"ARM Holdings"},{"ns":0,"title":"Adobe Firefly"},{"ns":0,"title":"Aidoc"},{"ns":0,"title":"Akamai Technologies"},{"ns":0,"title":"Aleph Alpha"},{"ns":0,"title":"Alphabet Inc."}]}}}}
+\ No newline at end of file
+diff --git a/src/__fixtures__/wikipediaPage.json b/src/__fixtures__/wikipediaPage.json
+new file mode 100644
+index 0000000..17b0c26
+--- /dev/null
++++ b/src/__fixtures__/wikipediaPage.json
+@@ -0,0 +1 @@
++{"batchcomplete":"","query":{"pages":{"6206236":{"pageid":6206236,"ns":0,"title":"Anthropic","extract":"Anthropic PBC is an American artificial intelligence (AI) company headquartered in San Francisco, California. It has developed a series of large language models (LLMs) named Claude and has a focus on AI safety. Anthropic was founded in 2021 by former members of OpenAI, including siblings Daniela Amodei and Dario Amodei, who are president and CEO, respectively. The company is privately held and had an estimated valuation of $965 billion in May 2026, making it the most valuable pure-play AI company in the world.\n\n\n== History ==\n\n\n=== 2021\u20132023 ===\n\nAnthropic was founded in January 2021 by seven former employees of OpenAI, including siblings Daniela Amodei and Dario Amodei, the latter of whom was OpenAI's Vice President of Research. They raised $124 million in May 2021. In the summer of 2022, Anthropic finished training the first version of Claude but did not immediately release it, citing a need for further internal safety testing and a desire to avoid initiating a potentially hazardous race to develop increasingly powerful AI systems. It was released in March 2023.\n\n\n=== 2024\u2013present ===\nIn 2024, Anthropic hired several notable employees from OpenAI, including Jan Leike and John Schulman. In May 2025, the company announced Claude 4. It also introduced new API capabilities, including the Model Context Protocol (MCP) connector. The company hosted its inaugural developer conference that month. Also in May, Anthropic launched a web search API that enables Claude to access real-time information from the internet. Claude Code, Anthropic's coding assistant, transitioned from research preview to general availability.\nIn September 2025, Anthropic announced that it would stop selling its products to groups majority-owned by Chinese, Russian, Iranian, or North Korean entities due to national security concerns. In October 2025, Anthropic announced a cloud partnership with Google, giving it access to up to one million of Google's custom Tensor Processing Units (TPUs), potentially adding more than one gigawatt of AI compute capacity by 2026. In November, Nvidia and Microsoft were expected to invest up to $15 billion in Anthropic, and Anthropic said it would buy $30 billion of computing capacity from Microsoft Azure running on Nvidia AI systems.\nIn November 2025, Anthropic said that hackers sponsored by the Chinese government used Claude to perform automated cyberattacks against around 30 global organizations. The hackers bypassed Anthropic's safeguards by pretending it was for defensive testing. In December 2025, Anthropic acquired Bun to improve Claude Code's speed and stability. The same month, Anthropic signed a multi-year, $200 million partnership with Snowflake Inc. to make Claude models available through that company's platform.\nIn February 2026, Anthropic aired two commercials during Super Bowl LX as part of a broader marketing campaign called \"A Time and a Place\", with four ads created by Mother. Each ad depicts AI assistants suddenly pivoting to promoting a fictional product in the middle of a conversation. Anthropic said that Claude will stay ad-free, in contrast to its competitor OpenAI, which introduced ads to the free version of ChatGPT. Also in February 2026, Anthropic donated $20 million to the nonprofit organization Public First Action, which has announced plans to support political candidates that support regulation of AI.\nIn 2026, Anthropic refused the United States Department of Defense's (DoD) demand to remove contractual restrictions prohibiting the use of its AI technology for domestic surveillance and fully autonomous weapons. After the refusal, the DoD designated the company a \"supply chain risk\" and barred all U.S. military private contractors, suppliers, and partners from doing business with the firm (see Anthropic\u2013United States Department of Defense dispute).\nIn May 2026, Anthropic announced a deal with xAI for use of its Colossus 1 data center to expand its model capacity. On May 18, the company acquired software startup Stainless for an undisclosed sum. It also made a $1.8 billion cloud computing deal with Akamai Technologies. Also in May, The New York Times reported that Anthropic was seeking to file an initial public offering (IPO), with a target of debuting in the fall of 2026. On June 1, Anthropic announced it had filed confidential IPO papers with the United States Securities and Exchange Commission. On June 12, it suspended access to its Claude Fable 5 and Mythos 5 models for foreign nationals after U.S. authorities raised national security concerns about the systems.\n\n\n== Business structure ==\n\nAccording to Anthropic, its goal is to research AI systems' safety and reliability. The Amodei siblings were among those who left OpenAI due to directional differences. Anthropic operates as a public benefit corporation. In January 2026, Anthropic introduced a division called \"Labs\", with Mike Krieger (formerly the company's Chief Product Officer) joining it. In March 2026, Anthropic launched the Anthropic Institute, a think tank studying AI led by Jack Clark. \n\n\n=== Notable employees ===\nDario Amodei: co-founder and CEO\nDaniela Amodei: co-founder and president\nAmanda Askell: philosopher working on Claude's character\nNicholas Carlini: researcher\nJack Clark: a co-founder and the head of policy\nJared Kaplan: co-founder and chief science officer\nMike Krieger: Chief Product Officer\nJan Leike: co-lead of the Alignment Science team, former OpenAI alignment researcher\nChris Olah: co-founder, interpretability research\nAndrej Karpathy: researcher\nJohn M. Jumper: Nobel Prize laureate, formerly at DeepMind\n\n\n== Product ==\n\nAnthropic's flagship product line is the \"Claude\" series of large language models, which some employees consider a reference to mathematician Claude Shannon. One of the techniques used to fine-tune Claude models is called \"constitutional AI\", in which the LLM is trained to adhere to a set of principles called a constitution. The company makes the models available via a web interface, an API, Amazon Bedrock, an iOS app, and Mac and Windows desktop apps.\nClaude Code is a command-line AI agent designed for coding. \"Cowork\" is an equivalent with a graphical user interface, intended to be simpler to use. While Claude Code is tailored toward developers, Cowork is designed for non-technical users, enabling them to automate file and task management (including reading, editing and writing new files) without requiring programming knowledge.\nWith the advent of Claude Code, vibe coding, a programming approach in which users describe desired outcomes in natural language and let an AI agent write the code, became increasingly popular. The term was coined by AI researcher Andrej Karpathy in February 2025 and rapidly gained popularity as AI coding tools became more ubiquitous. \n\n\n=== Release history ===\nClaude's first two versions, Claude and Claude Instant, were released in March 2023, but only Anthropic-approved users could use them. The next iteration, Claude 2, was launched to the public in July 2023. In March 2024, Anthropic released three language models: Claude 3 Opus, Claude 3 Sonnet, and Claude 3 Haiku, in decreasing order of performance. In June 2024, it released Claude 3.5 Sonnet. In May 2025, Anthropic released Claude 4 Opus and Sonnet. In February 2026, it released Claude Opus 4.6, followed by Sonnet 4.6. In April 2026, Anthropic announced Mythos.\n\n\n== Funding ==\nIn April 2022, Anthropic announced it had received $580 million in funding, including a $500 million investment from FTX under the leadership of Sam Bankman-Fried. In September 2023, Amazon announced a partnership with Anthropic. Amazon became a minority stakeholder by initially investing $1.25 billion and planning a total investment of $4 billion. The remaining $2.75 billion was invested in March 2024. In November 2024, Amazon invested another $4 billion, doubling its total investment. As part of the deal, Anthropic uses Amazon Web Services (AWS) as its primary cloud provider and makes its AI models available to AWS customers.\nIn October 2023, Google invested $500 million in Anthropic and committed to an additional $1.5 billion over time. In March 2025, Google agreed to invest another $1 billion in Anthropic. Anthropic raised $3.5 billion in a Series E funding round in March 2025, achieving a post-money valuation of $61.5 billion, led by Lightspeed Venture Partners with participation by several major investors. In September 2025, Anthropic completed a Series F funding round, raising $13 billion at a post-money valuation of $183 billion. The round was co-led by Iconiq Capital, Fidelity Management & Research, and Lightspeed Venture Partners, with participation by the Qatar Investment Authority and other investors. On 31 December 2025, it was confirmed that Anthropic had signed a term sheet for a $10 billion funding round led by Coatue and GIC, at a $350 billion valuation. On February 12, 2026, Anthropic announced that it had raised $30 billion in a Series G funding round, bringing its post-money valuation to $380 billion. In May 2026, Anthropic announced it had raised $65 billion of investment from multiple investors, including Altimeter Capital, Dragoneer Investment Group, and Sequoia Capital. The investment round valued the company at $965 billion. \n\n\n== Projects ==\n\n\n=== U.S. military and intelligence ===\n\nIn November 2024, Anthropic partnered with Palantir and Amazon Web Services to provide the Claude model to U.S. intelligence and defense agencies. In June 2025, Anthropic announced a \"Claude Gov\" model. Ars Technica reported that as of June 2025, it was in use at multiple U.S. national security agencies. As of February 2026, Anthropic's partnership with Palantir makes Claude the only AI model used in classified missions. In July 2025, the United States Department of Defense (DoD) announced that Anthropic had received a $200 million contract for AI in the military, along with Google, OpenAI, and xAI.\nAccording to The Wall Street Journal, the U.S. military used Claude in its 2026 raid on Venezuela to capture President Nicol\u00e1s Maduro. Exactly how Claude was used is unknown. The intervention resulted in the deaths of 83 people. Anthropic's usage policy prohibits directly using Claude for domestic surveillance or in fully autonomous weapons. White House officials said that these restrictions prevented federal contractors working with the FBI and Secret Service from using it. Tension regarding this policy has arisen with The Pentagon and the Trump administration.\nOn February 24, 2026, Defense Secretary Pete Hegseth threatened to cut Anthropic out of the DoD supply chain by February 27 if Anthropic did not permit unrestricted use of Claude, or he would invoke the Defense Production Act to assert unrestricted use without an agreement. On February 26, Anthropic rejected the Pentagon's demands to drop AI safeguards. On February 27, after the deadline, President Donald Trump ordered U.S. government agencies to stop using models developed by Anthropic. The action was described as retaliatory.\nTwo days later, it was reported that the US military had used Claude via Palantir's Maven Smart System during its attacks on Iran at the outset of the 2026 Iran war. It was later announced that the Pentagon was investigating whether Claude played a role in the U.S. strike on the Iranian girls' school that killed more than 170 people, mostly children. On March 5, the Pentagon officially deemed Anthropic a supply chain risk, after which the company said it saw \"no choice but to challenge ... in court\". In March, leaders from Google, Amazon, Apple, and Microsoft supported Anthropic's lawsuit against the DoD. On March 11, a Pentagon memo revealed its decision that Anthropic's AI tools may be used in rare circumstances beyond the previously announced six-month phase-out period if deemed necessary for national security. On March 26, the federal judge presiding over the case issued a temporary injunction against the Pentagon's actions, writing, \"This appears to be classic First Amendment retaliation.\"\n\n\n=== Education-related projects ===\nIn August 2025, Anthropic launched a Higher Education Advisory Board, chaired by former Yale University president and former Coursera CEO Rick Levin.\nAnthropic partnered with Iceland's Ministry of Education and Children in 2025 to allow teachers to access Claude and integrate AI into daily teaching.\n\n\n=== Project Panama ===\nIn January 2026, unsealed court filings from a 2024 class-action copyright lawsuit against Anthropic revealed the existence of the company's confidential \"Project Panama\" operation. In an internal planning document, Project Panama is described as Anthropic's \"effort to destructively scan all the books in the world\". To this end, the company purchased millions of used books from online retailers such as Better World Books, sliced off their spines and scanned their pages in order to train Claude. The paper was then recycled. Tom Turvey, who helped create Google Books, was hired for the operation. According to the Project Panama planning document, Anthropic did not \"want it to be known that [it was] working on this\". Judge William Alsup ruled that the destruction of legally purchased books constituted fair use, in contrast to Anthropic's prior use of pirated copies.\n\n\n== Research ==\n\n\n=== Constitutional AI ===\n\nAccording to Anthropic, Constitutional AI (CAI) is a framework developed to align AI systems with human values and ensure that they are helpful, harmless, and honest. Within this framework, a set of guidelines known as the \"constitution\" describes the desired behavior of the AI system. Claude 2's constitution includes phrases derived from documents such as the 1948 Universal Declaration of Human Rights and Apple's terms of service. For example, one rule from the UN Declaration applied in Claude 2's constitution is \"Please choose the response that most supports and encourages freedom, equality and a sense of brotherhood.\" The AI system evaluates the generated output and then adjusts the AI models to better fit the constitution.\n\n\n=== Interpretability ===\nAnthropic carries out and publishes research on the interpretability of machine learning systems. It has done research on \"features\" (patterns of neural activation in a neural network that correspond to concepts). In 2024, using a compute-intensive technique called \"dictionary learning\", Anthropic identified millions of these patterns in Claude, such as one associated with the Golden Gate Bridge. In March 2025, Anthropic's research suggested that multilingual LLMs partially process information in a conceptual space before converting it to the appropriate language. It also found evidence that LLMs can sometimes plan ahead. For example, when writing poetry, Claude identifies potential rhyming words before generating a line that ends with one of these words.\n\n\n=== Automation ===\nIn September 2025, Anthropic released a report saying that businesses primarily use AI for automation rather than collaboration, with three-quarters of companies that work with Claude using it for \"full task delegation\". Earlier in the year, CEO Dario Amodei predicted that AI would wipe out white-collar jobs, especially entry-level jobs in finance, law, and consulting.\n\n\n== Legal issues ==\nOn October 18, 2023, Anthropic was sued by Concord, Universal, ABKCO, and other music publishers for, per the complaint, \"systematic and widespread infringement of their copyrighted song lyrics.\" They alleged that the company used copyrighted material without permission in the form of song lyrics. The plaintiffs asked for up to $150,000 for each work infringed upon by Anthropic, citing infringement of copyright laws. In the lawsuit, the plaintiffs support their allegations of copyright violations by citing several examples of Anthropic's Claude model outputting copied lyrics from songs such as Katy Perry's \"Roar\" and Gloria Gaynor's \"I Will Survive\". Additionally, the plaintiffs alleged that even given some prompts that did not directly state a song name, the model responded with modified lyrics based on original work. On January 16, 2024, Anthropic claimed that the music publishers were not unreasonably harmed and that the examples noted by the plaintiffs were merely bugs.\nIn August 2024, a class-action lawsuit was filed against Anthropic in California for alleged copyright infringement. The suit claims Anthropic fed its LLMs with pirated copies of the authors' work, including from participants Kirk Wallace Johnson, Andrea Bartz, and Charles Graeber. On June 23, 2025, the United States District Court for the Northern District of California granted summary judgment for Anthropic that the use of digital copies of the plaintiffs' works (inter alia) for the purpose of training Anthropic's LLMs was a fair use. But it found that Anthropic had used millions of pirated library copies, and that such use could not constitute fair use. Therefore, the case was ordered to go to trial on the pirated copies used to create Anthropic's central library and the resulting damages. In September 2025, Anthropic agreed to pay authors $1.5 billion to settle the case, amounting to $3,000 per book plus interest. The proposed settlement, pending judge's approval, stands as the largest copyright resolution in U.S. history.\nIn June 2025, Reddit sued Anthropic for \"unlawful and unfair business acts\", alleging that Anthropic was in violation of Reddit's user agreement by training its models on users' personal data without their consent.\n\n\n== See also ==\nApprenticeship learning\nAI alignment\nAI warfare\nFriendly AI\nMechanistic interpretability\n\n\n== References ==\n\n\n== External links ==\n\nOfficial website"}}}}
+\ No newline at end of file
+diff --git a/src/__fixtures__/wikipediaSearch.json b/src/__fixtures__/wikipediaSearch.json
+new file mode 100644
+index 0000000..8d6f72b
+--- /dev/null
++++ b/src/__fixtures__/wikipediaSearch.json
+@@ -0,0 +1 @@
++{"batchcomplete":"","continue":{"sroffset":3,"continue":"-||"},"query":{"searchinfo":{"totalhits":821,"suggestion":"anthropo","suggestionsnippet":"anthropo"},"search":[{"ns":0,"title":"Anthropic","pageid":6206236,"size":76652,"wordcount":6223,"snippet":"<span class=\"searchmatch\">Anthropic</span> PBC is an American artificial intelligence (AI) company headquartered in San Francisco, California. It has developed a series of large language","timestamp":"2026-06-23T08:04:12Z"},{"ns":0,"title":"Claude (AI)","pageid":75879512,"size":68023,"wordcount":6009,"snippet":"series of large language models developed by American software company <span class=\"searchmatch\">Anthropic</span>. Claude was released as an AI-based chatbot in March 2023. It is also","timestamp":"2026-06-22T21:04:50Z"},{"ns":0,"title":"Anthropic principle","pageid":2792,"size":77940,"wordcount":9813,"snippet":"In philosophy of science and cosmology, the <span class=\"searchmatch\">anthropic</span> principle (also known as the observation selection effect) is the proposition that the range of","timestamp":"2026-06-06T17:11:30Z"}]}}
+\ No newline at end of file
+diff --git a/src/__tests__/app/api/chat/route.test.ts b/src/__tests__/app/api/chat/route.test.ts
+new file mode 100644
+index 0000000..15a7ee4
+--- /dev/null
++++ b/src/__tests__/app/api/chat/route.test.ts
+@@ -0,0 +1,55 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/config/loadServerConfig', () => ({
++  loadServerConfig: () => ({ anthropicApiKey: 'k', tavilyApiKey: 't' }),
++}));
++vi.mock('@/clients/anthropic/createAnthropicClient', () => ({
++  createAnthropicClient: () => ({}) as never,
++}));
++vi.mock('@/services/agent/runResearchAgent', () => ({
++  runResearchAgent: vi.fn(async (_messages, { sink }) => {
++    sink.onToolCall('search_wikipedia', { query: 'x' });
++    sink.onToolResult('search_wikipedia', '3 result(s)');
++    sink.onText('Answer.');
++    sink.onDone('Answer.');
++  }),
++}));
++
++import { POST } from '@/app/api/chat/route';
++
++async function readBody(response: Response): Promise<string> {
++  const reader = response.body!.getReader();
++  const decoder = new TextDecoder();
++  let out = '';
++  for (;;) {
++    const { done, value } = await reader.read();
++    if (done) break;
++    out += decoder.decode(value);
++  }
++  return out;
++}
++
++describe('POST /api/chat', () => {
++  afterEach(() => vi.clearAllMocks());
++
++  it('streams the agent events as SSE frames', async () => {
++    const request = new Request('http://test/api/chat', {
++      method: 'POST',
++      body: JSON.stringify({ messages: [{ role: 'user', content: 'q' }] }),
++    });
++    const response = await POST(request);
++    expect(response.headers.get('content-type')).toContain('text/event-stream');
++    const body = await readBody(response);
++    expect(body).toContain('"type":"tool_call"');
++    expect(body).toContain('"type":"done"');
++  });
++
++  it('returns 400 when messages are missing', async () => {
++    const request = new Request('http://test/api/chat', {
++      method: 'POST',
++      body: JSON.stringify({}),
++    });
++    const response = await POST(request);
++    expect(response.status).toBe(400);
++  });
++});
+diff --git a/src/__tests__/clients/tavily/searchWeb.test.ts b/src/__tests__/clients/tavily/searchWeb.test.ts
+new file mode 100644
+index 0000000..b2ae95f
+--- /dev/null
++++ b/src/__tests__/clients/tavily/searchWeb.test.ts
+@@ -0,0 +1,43 @@
++import { readFileSync } from 'fs';
++import { resolve } from 'path';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import { searchWeb } from '@/clients/tavily/searchWeb';
++
++const fixture = JSON.parse(
++  readFileSync(
++    resolve(__dirname, '../../../__fixtures__/tavilySearch.json'),
++    'utf8',
++  ),
++);
++
++describe('searchWeb', () => {
++  beforeEach(() => {
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(fixture))),
++    );
++  });
++  afterEach(() => vi.unstubAllGlobals());
++
++  it('maps Tavily results to title/url/snippet', async () => {
++    const results = await searchWeb('Anthropic', 'tvly-test', 5);
++    expect(results[0]).toEqual({
++      title: 'Anthropic',
++      url: 'https://www.anthropic.com',
++      snippet: 'Anthropic is an AI safety company founded in 2021.',
++    });
++  });
++
++  it('sends the api key and query in the POST body', async () => {
++    const fetchMock = vi.fn(
++      async (_url: string, _init?: RequestInit) =>
++        new Response(JSON.stringify(fixture)),
++    );
++    vi.stubGlobal('fetch', fetchMock);
++    await searchWeb('test query', 'tvly-secret', 3);
++    const init = fetchMock.mock.calls[0]?.[1];
++    const body = JSON.parse(String(init?.body));
++    expect(body.api_key).toBe('tvly-secret');
++    expect(body.query).toBe('test query');
++  });
++});
+diff --git a/src/__tests__/clients/wikipedia/getWikipediaPage.test.ts b/src/__tests__/clients/wikipedia/getWikipediaPage.test.ts
+new file mode 100644
+index 0000000..6bbe377
+--- /dev/null
++++ b/src/__tests__/clients/wikipedia/getWikipediaPage.test.ts
+@@ -0,0 +1,59 @@
++import { readFileSync } from 'fs';
++import { resolve } from 'path';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import { getWikipediaPage } from '@/clients/wikipedia/getWikipediaPage';
++
++const fixture = JSON.parse(
++  readFileSync(
++    resolve(__dirname, '../../../__fixtures__/wikipediaPage.json'),
++    'utf8',
++  ),
++);
++
++describe('getWikipediaPage', () => {
++  beforeEach(() => {
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(fixture))),
++    );
++  });
++  afterEach(() => vi.unstubAllGlobals());
++
++  it('returns the plain-text extract for the page', async () => {
++    const page = await getWikipediaPage('Anthropic');
++    expect(page.title).toBeTruthy();
++    expect(page.extract.length).toBeGreaterThan(0);
++    // The real Anthropic article fixture (17 723 chars) exceeds MAX_ARTICLE_CHARS (6 000),
++    // so the result is truncated. Asserting the actual fixture behaviour rather than a
++    // synthetic assumption.
++    expect(page.truncated).toBe(true);
++    expect(page.extract.length).toBeLessThanOrEqual(6000);
++  });
++
++  it('truncates extracts longer than the char budget', async () => {
++    const long = { ...fixture };
++    const pageId = Object.keys(long.query.pages)[0];
++    long.query.pages[pageId].extract = 'x'.repeat(10000);
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(long))),
++    );
++    const page = await getWikipediaPage('Anthropic');
++    expect(page.truncated).toBe(true);
++    expect(page.extract.length).toBeLessThanOrEqual(6000);
++  });
++
++  it('does not truncate extracts shorter than the char budget', async () => {
++    const short = { ...fixture };
++    const pageId = Object.keys(short.query.pages)[0];
++    const shortExtract = 'x'.repeat(100);
++    short.query.pages[pageId].extract = shortExtract;
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(short))),
++    );
++    const page = await getWikipediaPage('Anthropic');
++    expect(page.truncated).toBe(false);
++    expect(page.extract).toBe(shortExtract);
++  });
++});
+diff --git a/src/__tests__/clients/wikipedia/getWikipediaPageLinks.test.ts b/src/__tests__/clients/wikipedia/getWikipediaPageLinks.test.ts
+new file mode 100644
+index 0000000..6a7c720
+--- /dev/null
++++ b/src/__tests__/clients/wikipedia/getWikipediaPageLinks.test.ts
+@@ -0,0 +1,28 @@
++import { readFileSync } from 'fs';
++import { resolve } from 'path';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import { getWikipediaPageLinks } from '@/clients/wikipedia/getWikipediaPageLinks';
++
++const fixture = JSON.parse(
++  readFileSync(
++    resolve(__dirname, '../../../__fixtures__/wikipediaLinks.json'),
++    'utf8',
++  ),
++);
++
++describe('getWikipediaPageLinks', () => {
++  beforeEach(() => {
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(fixture))),
++    );
++  });
++  afterEach(() => vi.unstubAllGlobals());
++
++  it('returns a flat list of related article titles', async () => {
++    const links = await getWikipediaPageLinks('Anthropic');
++    expect(Array.isArray(links)).toBe(true);
++    expect(links.length).toBeGreaterThan(0);
++    expect(typeof links[0]).toBe('string');
++  });
++});
+diff --git a/src/__tests__/clients/wikipedia/searchWikipediaArticles.test.ts b/src/__tests__/clients/wikipedia/searchWikipediaArticles.test.ts
+new file mode 100644
+index 0000000..42aea64
+--- /dev/null
++++ b/src/__tests__/clients/wikipedia/searchWikipediaArticles.test.ts
+@@ -0,0 +1,34 @@
++import { readFileSync } from 'fs';
++import { resolve } from 'path';
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import { searchWikipediaArticles } from '@/clients/wikipedia/searchWikipediaArticles';
++
++const fixture = JSON.parse(
++  readFileSync(
++    resolve(__dirname, '../../../__fixtures__/wikipediaSearch.json'),
++    'utf8',
++  ),
++);
++
++describe('searchWikipediaArticles', () => {
++  beforeEach(() => {
++    vi.stubGlobal(
++      'fetch',
++      vi.fn(async () => new Response(JSON.stringify(fixture))),
++    );
++  });
++  afterEach(() => vi.unstubAllGlobals());
++
++  it('maps the real MediaWiki search response to title/snippet pairs', async () => {
++    const results = await searchWikipediaArticles('Anthropic', 3);
++    expect(results.length).toBeGreaterThan(0);
++    expect(results[0]).toHaveProperty('title');
++    expect(results[0]).toHaveProperty('snippet');
++    expect(typeof results[0].title).toBe('string');
++  });
++
++  it('strips HTML markup from snippets', async () => {
++    const results = await searchWikipediaArticles('Anthropic', 3);
++    expect(results.every((r) => !/<[^>]+>/.test(r.snippet))).toBe(true);
++  });
++});
+diff --git a/src/__tests__/components/Chat/Chat.test.tsx b/src/__tests__/components/Chat/Chat.test.tsx
+new file mode 100644
+index 0000000..660d995
+--- /dev/null
++++ b/src/__tests__/components/Chat/Chat.test.tsx
+@@ -0,0 +1,28 @@
++import { fireEvent, render, screen, waitFor } from '@testing-library/react';
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/api/streamChat', () => ({
++    streamChat: vi.fn(async (_messages, onEvent) => {
++        onEvent({ type: 'text', delta: 'Hello from the agent.' });
++        onEvent({ type: 'done' });
++    }),
++}));
++
++import { Chat } from '@/components/Chat/Chat';
++
++describe('Chat', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('sends input and renders the streamed answer', async () => {
++        render(<Chat />);
++        fireEvent.change(screen.getByLabelText(/message/i), {
++            target: { value: 'Tell me about Anthropic' },
++        });
++        fireEvent.click(screen.getByRole('button', { name: /send/i }));
++
++        expect(screen.getByText('Tell me about Anthropic')).toBeInTheDocument();
++        await waitFor(() =>
++            expect(screen.getByText('Hello from the agent.')).toBeInTheDocument(),
++        );
++    });
++});
+diff --git a/src/__tests__/config/loadServerConfig.test.ts b/src/__tests__/config/loadServerConfig.test.ts
+new file mode 100644
+index 0000000..575165b
+--- /dev/null
++++ b/src/__tests__/config/loadServerConfig.test.ts
+@@ -0,0 +1,26 @@
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++import { loadServerConfig } from '@/config/loadServerConfig';
++
++describe('loadServerConfig', () => {
++  const original = { ...process.env };
++
++  beforeEach(() => {
++    process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
++    process.env.TAVILY_API_KEY = 'tvly-test';
++  });
++  afterEach(() => {
++    process.env = { ...original };
++  });
++
++  it('returns both keys when present', () => {
++    expect(loadServerConfig()).toEqual({
++      anthropicApiKey: 'sk-ant-test',
++      tavilyApiKey: 'tvly-test',
++    });
++  });
++
++  it('throws naming the missing variable', () => {
++    delete process.env.TAVILY_API_KEY;
++    expect(() => loadServerConfig()).toThrow(/TAVILY_API_KEY/);
++  });
++});
+diff --git a/src/__tests__/services/agent/executeToolCall.test.ts b/src/__tests__/services/agent/executeToolCall.test.ts
+new file mode 100644
+index 0000000..57394ef
+--- /dev/null
++++ b/src/__tests__/services/agent/executeToolCall.test.ts
+@@ -0,0 +1,35 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/services/agent/toolRegistry', () => ({
++    toolRegistry: {
++        ok_tool: { execute: vi.fn(async () => '{"ok":true}') },
++        boom_tool: {
++            execute: vi.fn(async () => {
++                throw new Error('kaboom');
++            }),
++        },
++    },
++}));
++
++import { executeToolCall } from '@/services/agent/executeToolCall';
++
++describe('executeToolCall', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('returns content with isError false on success', async () => {
++        const out = await executeToolCall('ok_tool', {}, { tavilyApiKey: 'x' });
++        expect(out).toEqual({ content: '{"ok":true}', isError: false });
++    });
++
++    it('returns isError true with the message when the tool throws', async () => {
++        const out = await executeToolCall('boom_tool', {}, { tavilyApiKey: 'x' });
++        expect(out.isError).toBe(true);
++        expect(out.content).toMatch(/kaboom/);
++    });
++
++    it('returns isError true for an unknown tool name', async () => {
++        const out = await executeToolCall('nope', {}, { tavilyApiKey: 'x' });
++        expect(out.isError).toBe(true);
++        expect(out.content).toMatch(/unknown tool/i);
++    });
++});
+diff --git a/src/__tests__/services/agent/runResearchAgent.test.ts b/src/__tests__/services/agent/runResearchAgent.test.ts
+new file mode 100644
+index 0000000..717e17a
+--- /dev/null
++++ b/src/__tests__/services/agent/runResearchAgent.test.ts
+@@ -0,0 +1,116 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/services/agent/executeToolCall', () => ({
++    executeToolCall: vi.fn(async () => ({ content: '[]', isError: false })),
++}));
++vi.mock('@/services/agent/toolRegistry', () => ({ toolSchemas: [] }));
++
++import { runResearchAgent } from '@/services/agent/runResearchAgent';
++import { executeToolCall } from '@/services/agent/executeToolCall';
++
++type FinalMessage = {
++    stop_reason: string;
++    content: { type: string; text?: string; id?: string; name?: string; input?: unknown }[];
++};
++
++function fakeStream(final: FinalMessage) {
++    return {
++        async *[Symbol.asyncIterator]() {
++            yield { type: 'content_block_delta', delta: { type: 'text_delta', text: 'hi' } };
++        },
++        finalMessage: async () => final,
++    };
++}
++
++function fakeClient(finals: FinalMessage[]) {
++    let call = 0;
++    return {
++        messages: { stream: vi.fn(() => fakeStream(finals[call++])) },
++    } as never;
++}
++
++function makeSink() {
++    return {
++        onThinking: vi.fn(),
++        onText: vi.fn(),
++        onToolCall: vi.fn(),
++        onToolResult: vi.fn(),
++        onDone: vi.fn(),
++        onError: vi.fn(),
++    };
++}
++
++const deps = { tavilyApiKey: 'x' };
++
++describe('runResearchAgent', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('calls onDone with the final text when the model ends its turn', async () => {
++        const client = fakeClient([
++            { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Answer.' }] },
++        ]);
++        const sink = makeSink();
++        await runResearchAgent([{ role: 'user', content: 'q' }], {
++            client,
++            sink,
++            deps,
++        });
++        expect(sink.onDone).toHaveBeenCalledWith('Answer.');
++        expect(sink.onToolCall).not.toHaveBeenCalled();
++    });
++
++    it('executes a tool call then continues to the final answer', async () => {
++        const client = fakeClient([
++            {
++                stop_reason: 'tool_use',
++                content: [
++                    { type: 'tool_use', id: 't1', name: 'search_wikipedia', input: { query: 'x' } },
++                ],
++            },
++            { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] },
++        ]);
++        const sink = makeSink();
++        await runResearchAgent([{ role: 'user', content: 'q' }], {
++            client,
++            sink,
++            deps,
++        });
++        expect(executeToolCall).toHaveBeenCalledWith(
++            'search_wikipedia',
++            { query: 'x' },
++            deps,
++        );
++        expect(sink.onToolCall).toHaveBeenCalledWith('search_wikipedia', { query: 'x' });
++        expect(sink.onToolResult).toHaveBeenCalled();
++        expect(sink.onDone).toHaveBeenCalledWith('Done.');
++    });
++
++    it('calls onError when a refusal is returned', async () => {
++        const client = fakeClient([{ stop_reason: 'refusal', content: [] }]);
++        const sink = makeSink();
++        await runResearchAgent([{ role: 'user', content: 'q' }], {
++            client,
++            sink,
++            deps,
++        });
++        expect(sink.onError).toHaveBeenCalled();
++        expect(sink.onDone).not.toHaveBeenCalled();
++    });
++
++    it('calls onError when the iteration cap is exceeded', async () => {
++        const toolFinal: FinalMessage = {
++            stop_reason: 'tool_use',
++            content: [{ type: 'tool_use', id: 't', name: 'web_search', input: { query: 'x' } }],
++        };
++        const client = fakeClient(Array.from({ length: 10 }, () => toolFinal));
++        const sink = makeSink();
++        await runResearchAgent([{ role: 'user', content: 'q' }], {
++            client,
++            sink,
++            deps,
++        });
++        expect(sink.onError).toHaveBeenCalledWith(
++            expect.stringMatching(/max.*iteration/i),
++        );
++    });
++});
+diff --git a/src/__tests__/services/eval/collectAgentRun.test.ts b/src/__tests__/services/eval/collectAgentRun.test.ts
+new file mode 100644
+index 0000000..a09ae53
+--- /dev/null
++++ b/src/__tests__/services/eval/collectAgentRun.test.ts
+@@ -0,0 +1,42 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/services/agent/runResearchAgent', () => ({
++    runResearchAgent: vi.fn(async (_messages, { sink }) => {
++        sink.onToolCall('search_wikipedia', { query: 'x' });
++        sink.onToolResult('search_wikipedia', '3 result(s)');
++        sink.onText('Partial ');
++        sink.onDone('Final answer.');
++    }),
++}));
++
++import { runResearchAgent } from '@/services/agent/runResearchAgent';
++import { collectAgentRun } from '@/services/eval/collectAgentRun';
++
++describe('collectAgentRun', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('collects the final answer and the tools used', async () => {
++        const run = await collectAgentRun('What is X?', {
++            client: {} as never,
++            deps: { tavilyApiKey: 't' },
++        });
++        expect(run.finalAnswer).toBe('Final answer.');
++        expect(run.toolsUsed).toEqual(['search_wikipedia']);
++        expect(run.iterationCount).toBeGreaterThanOrEqual(1);
++    });
++
++    it('returns empty toolsUsed when the agent answers without calling any tool', async () => {
++        vi.mocked(runResearchAgent).mockImplementationOnce(async (_messages, { sink }) => {
++            sink.onText('Thinking...');
++            sink.onDone('Direct answer.');
++        });
++
++        const run = await collectAgentRun('What is Y?', {
++            client: {} as never,
++            deps: { tavilyApiKey: 't' },
++        });
++        expect(run.finalAnswer).toBe('Direct answer.');
++        expect(run.toolsUsed).toEqual([]);
++        expect(run.iterationCount).toBe(1);
++    });
++});
+diff --git a/src/__tests__/services/eval/judgeResult.test.ts b/src/__tests__/services/eval/judgeResult.test.ts
+new file mode 100644
+index 0000000..587795a
+--- /dev/null
++++ b/src/__tests__/services/eval/judgeResult.test.ts
+@@ -0,0 +1,46 @@
++import { readFileSync } from 'fs';
++import { resolve } from 'path';
++import { describe, expect, it, vi } from 'vitest';
++import { judgeResult } from '@/services/eval/judgeResult';
++import type { EvalItem, EvalRunOutput } from '@/types/eval';
++
++const scoreObject = JSON.parse(
++    readFileSync(
++        resolve(__dirname, '../../../__fixtures__/judgeResponse.json'),
++        'utf8',
++    ),
++) as Record<string, unknown>;
++
++const item: EvalItem = { id: 'q1', question: 'Q', rubric: 'cover X and Y' };
++const run: EvalRunOutput = {
++    finalAnswer: 'A',
++    toolsUsed: ['search_wikipedia'],
++    iterationCount: 2,
++};
++
++describe('judgeResult', () => {
++    it('returns the parsed score from the judge model', async () => {
++        const client = {
++            messages: {
++                create: vi.fn(async () => ({
++                    content: [{ type: 'text', text: JSON.stringify(scoreObject) }],
++                })),
++            },
++        } as never;
++        const score = await judgeResult(item, run, client);
++        expect(score.factuality).toBe(8);
++        expect(score.pass).toBe(true);
++    });
++
++    it('validates the score against the schema (rejects out-of-range)', async () => {
++        const badScore = { ...scoreObject, factuality: 99 };
++        const client = {
++            messages: {
++                create: vi.fn(async () => ({
++                    content: [{ type: 'text', text: JSON.stringify(badScore) }],
++                })),
++            },
++        } as never;
++        await expect(judgeResult(item, run, client)).rejects.toThrow();
++    });
++});
+diff --git a/src/__tests__/services/eval/writeReport.test.ts b/src/__tests__/services/eval/writeReport.test.ts
+new file mode 100644
+index 0000000..d75efaf
+--- /dev/null
++++ b/src/__tests__/services/eval/writeReport.test.ts
+@@ -0,0 +1,44 @@
++import { describe, expect, it } from 'vitest';
++import { writeReport } from '@/services/eval/writeReport';
++import type { EvalResult } from '@/types/eval';
++
++const results: EvalResult[] = [
++    {
++        item: { id: 'q1', question: 'Q1', rubric: 'r' },
++        run: { finalAnswer: 'a', toolsUsed: ['search_wikipedia'], iterationCount: 1 },
++        score: {
++            factuality: 8,
++            citationUse: 8,
++            completeness: 8,
++            toolEfficiency: 8,
++            rationale: 'good',
++            pass: true,
++        },
++    },
++    {
++        item: { id: 'q2', question: 'Q2', rubric: 'r' },
++        run: { finalAnswer: 'b', toolsUsed: [], iterationCount: 1 },
++        score: {
++            factuality: 4,
++            citationUse: 4,
++            completeness: 4,
++            toolEfficiency: 6,
++            rationale: 'thin',
++            pass: false,
++        },
++    },
++];
++
++describe('writeReport', () => {
++    it('computes pass count and per-axis averages in the markdown', () => {
++        const { markdown } = writeReport(results);
++        expect(markdown).toContain('1/2 passed');
++        expect(markdown).toContain('factuality');
++        expect(markdown).toContain('6.0'); // (8 + 4) / 2
++    });
++
++    it('emits valid JSON of the full results', () => {
++        const { json } = writeReport(results);
++        expect(JSON.parse(json)).toHaveLength(2);
++    });
++});
+diff --git a/src/__tests__/services/sse/encodeSseEvent.test.ts b/src/__tests__/services/sse/encodeSseEvent.test.ts
+new file mode 100644
+index 0000000..1c80a3d
+--- /dev/null
++++ b/src/__tests__/services/sse/encodeSseEvent.test.ts
+@@ -0,0 +1,14 @@
++import { describe, expect, it } from 'vitest';
++import { encodeSseEvent } from '@/services/sse/encodeSseEvent';
++import type { SseEvent } from '@/types/chat';
++
++describe('encodeSseEvent', () => {
++    it('round-trips an event through the SSE wire format', () => {
++        const event: SseEvent = { type: 'text', delta: 'hello' };
++        const wire = encodeSseEvent(event);
++        expect(wire.startsWith('data: ')).toBe(true);
++        expect(wire.endsWith('\n\n')).toBe(true);
++        const parsed = JSON.parse(wire.slice('data: '.length).trim());
++        expect(parsed).toEqual(event);
++    });
++});
+diff --git a/src/__tests__/setup.ts b/src/__tests__/setup.ts
+new file mode 100644
+index 0000000..bb02c60
+--- /dev/null
++++ b/src/__tests__/setup.ts
+@@ -0,0 +1 @@
++import '@testing-library/jest-dom/vitest';
+diff --git a/src/__tests__/state/useChatStream.test.tsx b/src/__tests__/state/useChatStream.test.tsx
+new file mode 100644
+index 0000000..87d27bb
+--- /dev/null
++++ b/src/__tests__/state/useChatStream.test.tsx
+@@ -0,0 +1,34 @@
++import { act, renderHook, waitFor } from '@testing-library/react';
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/api/streamChat', () => ({
++    streamChat: vi.fn(async (_messages, onEvent) => {
++        onEvent({ type: 'tool_call', name: 'search_wikipedia', input: { query: 'x' } });
++        onEvent({ type: 'tool_result', name: 'search_wikipedia', summary: '3 result(s)' });
++        onEvent({ type: 'text', delta: 'Hello ' });
++        onEvent({ type: 'text', delta: 'world.' });
++        onEvent({ type: 'done' });
++    }),
++}));
++
++import { useChatStream } from '@/state/useChatStream';
++
++describe('useChatStream', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('accumulates the user message, tool steps, and streamed answer', async () => {
++        const { result } = renderHook(() => useChatStream());
++
++        act(() => result.current.send('q'));
++
++        await waitFor(() => expect(result.current.isStreaming).toBe(false));
++
++        const [userMessage, assistantMessage] = result.current.messages;
++        expect(userMessage).toMatchObject({ role: 'user', content: 'q' });
++        expect(assistantMessage.role).toBe('assistant');
++        expect(assistantMessage.content).toBe('Hello world.');
++        expect(assistantMessage.toolSteps).toEqual([
++            { name: 'search_wikipedia', input: { query: 'x' }, summary: '3 result(s)' },
++        ]);
++    });
++});
+diff --git a/src/__tests__/tools/getRelatedArticles.test.ts b/src/__tests__/tools/getRelatedArticles.test.ts
+new file mode 100644
+index 0000000..7e42333
+--- /dev/null
++++ b/src/__tests__/tools/getRelatedArticles.test.ts
+@@ -0,0 +1,32 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/clients/wikipedia/getWikipediaPageLinks', () => ({
++    getWikipediaPageLinks: vi.fn(async () => ['Claude', 'AI safety']),
++}));
++
++import getRelatedArticles from '@/tools/getRelatedArticles';
++import { getWikipediaPageLinks } from '@/clients/wikipedia/getWikipediaPageLinks';
++
++describe('getRelatedArticles tool', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('has a name and required title in its schema', () => {
++        expect(getRelatedArticles.schema.name).toBe('get_related_articles');
++        expect(getRelatedArticles.schema.input_schema.required).toContain('title');
++    });
++
++    it('calls the client and returns the results as a JSON string', async () => {
++        const out = await getRelatedArticles.execute(
++            { title: 'Anthropic' },
++            { tavilyApiKey: 'x' },
++        );
++        expect(getWikipediaPageLinks).toHaveBeenCalledWith('Anthropic');
++        expect(JSON.parse(out)).toEqual(['Claude', 'AI safety']);
++    });
++
++    it('rejects empty title input', async () => {
++        await expect(
++            getRelatedArticles.execute({ title: '' }, { tavilyApiKey: 'x' }),
++        ).rejects.toThrow(/title/);
++    });
++});
+diff --git a/src/__tests__/tools/getWikipediaArticle.test.ts b/src/__tests__/tools/getWikipediaArticle.test.ts
+new file mode 100644
+index 0000000..8aa2a9f
+--- /dev/null
++++ b/src/__tests__/tools/getWikipediaArticle.test.ts
+@@ -0,0 +1,36 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/clients/wikipedia/getWikipediaPage', () => ({
++    getWikipediaPage: vi.fn(async () => ({
++        title: 'Anthropic',
++        extract: 'text',
++        truncated: false,
++    })),
++}));
++
++import getWikipediaArticle from '@/tools/getWikipediaArticle';
++import { getWikipediaPage } from '@/clients/wikipedia/getWikipediaPage';
++
++describe('getWikipediaArticle tool', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('has a name and required title in its schema', () => {
++        expect(getWikipediaArticle.schema.name).toBe('get_wikipedia_article');
++        expect(getWikipediaArticle.schema.input_schema.required).toContain('title');
++    });
++
++    it('calls the client and returns the results as a JSON string', async () => {
++        const out = await getWikipediaArticle.execute(
++            { title: 'Anthropic' },
++            { tavilyApiKey: 'x' },
++        );
++        expect(getWikipediaPage).toHaveBeenCalledWith('Anthropic');
++        expect(JSON.parse(out).title).toBe('Anthropic');
++    });
++
++    it('rejects empty title input', async () => {
++        await expect(
++            getWikipediaArticle.execute({ title: '' }, { tavilyApiKey: 'x' }),
++        ).rejects.toThrow(/title/);
++    });
++});
+diff --git a/src/__tests__/tools/searchWikipedia.test.ts b/src/__tests__/tools/searchWikipedia.test.ts
+new file mode 100644
+index 0000000..062ceec
+--- /dev/null
++++ b/src/__tests__/tools/searchWikipedia.test.ts
+@@ -0,0 +1,34 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/clients/wikipedia/searchWikipediaArticles', () => ({
++    searchWikipediaArticles: vi.fn(async () => [
++        { title: 'Anthropic', snippet: 'AI safety company' },
++    ]),
++}));
++
++import searchWikipedia from '@/tools/searchWikipedia';
++import { searchWikipediaArticles } from '@/clients/wikipedia/searchWikipediaArticles';
++
++describe('searchWikipedia tool', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('has a name and required query in its schema', () => {
++        expect(searchWikipedia.schema.name).toBe('search_wikipedia');
++        expect(searchWikipedia.schema.input_schema.required).toContain('query');
++    });
++
++    it('calls the client and returns the results as a JSON string', async () => {
++        const out = await searchWikipedia.execute(
++            { query: 'Anthropic' },
++            { tavilyApiKey: 'x' },
++        );
++        expect(searchWikipediaArticles).toHaveBeenCalledWith('Anthropic', 5);
++        expect(JSON.parse(out)[0].title).toBe('Anthropic');
++    });
++
++    it('rejects empty query input', async () => {
++        await expect(
++            searchWikipedia.execute({ query: '' }, { tavilyApiKey: 'x' }),
++        ).rejects.toThrow(/query/);
++    });
++});
+diff --git a/src/__tests__/tools/webSearch.test.ts b/src/__tests__/tools/webSearch.test.ts
+new file mode 100644
+index 0000000..ae9e6ab
+--- /dev/null
++++ b/src/__tests__/tools/webSearch.test.ts
+@@ -0,0 +1,25 @@
++import { afterEach, describe, expect, it, vi } from 'vitest';
++
++vi.mock('@/clients/tavily/searchWeb', () => ({
++    searchWeb: vi.fn(async () => [
++        { title: 'A', url: 'https://a.com', snippet: 's' },
++    ]),
++}));
++
++import webSearch from '@/tools/webSearch';
++import { searchWeb } from '@/clients/tavily/searchWeb';
++
++describe('webSearch tool', () => {
++    afterEach(() => vi.clearAllMocks());
++
++    it('passes the tavily api key from deps to the client', async () => {
++        await webSearch.execute({ query: 'news' }, { tavilyApiKey: 'tvly-x' });
++        expect(searchWeb).toHaveBeenCalledWith('news', 'tvly-x');
++    });
++
++    it('rejects empty query', async () => {
++        await expect(
++            webSearch.execute({ query: '   ' }, { tavilyApiKey: 'tvly-x' }),
++        ).rejects.toThrow(/query/);
++    });
++});
+diff --git a/src/api/streamChat.ts b/src/api/streamChat.ts
+new file mode 100644
+index 0000000..bd69a76
+--- /dev/null
++++ b/src/api/streamChat.ts
+@@ -0,0 +1,35 @@
++/** Browser fetch wrapper around POST /api/chat. Parses the SSE byte stream
++ * and invokes onEvent for each decoded SseEvent. */
++import type { ChatMessage, SseEvent } from '@/types/chat';
++
++export async function streamChat(
++    messages: ChatMessage[],
++    onEvent: (event: SseEvent) => void,
++    signal?: AbortSignal,
++): Promise<void> {
++    const response = await fetch('/api/chat', {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ messages }),
++        signal,
++    });
++    if (!response.ok || !response.body) {
++        throw new Error(`Chat request failed: ${response.status}`);
++    }
++
++    const reader = response.body.getReader();
++    const decoder = new TextDecoder();
++    let buffer = '';
++    for (;;) {
++        const { done, value } = await reader.read();
++        if (done) break;
++        buffer += decoder.decode(value, { stream: true });
++        const frames = buffer.split('\n\n');
++        buffer = frames.pop() ?? '';
++        for (const frame of frames) {
++            const line = frame.trim();
++            if (!line.startsWith('data:')) continue;
++            onEvent(JSON.parse(line.slice('data:'.length).trim()) as SseEvent);
++        }
++    }
++}
+diff --git a/src/app/api/chat/route.ts b/src/app/api/chat/route.ts
+new file mode 100644
+index 0000000..8cd397f
+--- /dev/null
++++ b/src/app/api/chat/route.ts
+@@ -0,0 +1,68 @@
++/** POST /api/chat - runs the research agent and streams its events to the
++ * browser as Server-Sent Events. */
++import { createAnthropicClient } from '@/clients/anthropic/createAnthropicClient';
++import { loadServerConfig } from '@/config/loadServerConfig';
++import { runResearchAgent } from '@/services/agent/runResearchAgent';
++import { encodeSseEvent } from '@/services/sse/encodeSseEvent';
++import type { AgentSink } from '@/services/agent/agentSink';
++import type { ChatMessage, SseEvent } from '@/types/chat';
++import type Anthropic from '@anthropic-ai/sdk';
++
++export const runtime = 'nodejs';
++
++export async function POST(request: Request): Promise<Response> {
++    const body = (await request.json().catch(() => null)) as {
++        messages?: ChatMessage[];
++    } | null;
++    if (!body || !Array.isArray(body.messages) || body.messages.length === 0) {
++        return new Response('messages required', { status: 400 });
++    }
++
++    const { anthropicApiKey, tavilyApiKey } = loadServerConfig();
++    const client = createAnthropicClient(anthropicApiKey);
++    const messages = body.messages.map(toMessageParam);
++
++    const stream = new ReadableStream({
++        async start(controller) {
++            const encoder = new TextEncoder();
++            const send = (event: SseEvent) =>
++                controller.enqueue(encoder.encode(encodeSseEvent(event)));
++            const sink = buildSink(send);
++            try {
++                await runResearchAgent(messages, {
++                    client,
++                    sink,
++                    deps: { tavilyApiKey },
++                });
++            } catch (error) {
++                const message = error instanceof Error ? error.message : String(error);
++                send({ type: 'error', message });
++            } finally {
++                controller.close();
++            }
++        },
++    });
++
++    return new Response(stream, {
++        headers: {
++            'content-type': 'text/event-stream; charset=utf-8',
++            'cache-control': 'no-cache, no-transform',
++            connection: 'keep-alive',
++        },
++    });
++}
++
++function buildSink(send: (event: SseEvent) => void): AgentSink {
++    return {
++        onThinking: (delta) => send({ type: 'thinking', delta }),
++        onText: (delta) => send({ type: 'text', delta }),
++        onToolCall: (name, input) => send({ type: 'tool_call', name, input }),
++        onToolResult: (name, summary) => send({ type: 'tool_result', name, summary }),
++        onDone: () => send({ type: 'done' }),
++        onError: (message) => send({ type: 'error', message }),
++    };
++}
++
++function toMessageParam(message: ChatMessage): Anthropic.MessageParam {
++    return { role: message.role, content: message.content };
++}
+diff --git a/src/app/globals.scss b/src/app/globals.scss
+new file mode 100644
+index 0000000..8b29372
+--- /dev/null
++++ b/src/app/globals.scss
+@@ -0,0 +1,12 @@
++:root {
++    color-scheme: light dark;
++}
++
++* {
++    box-sizing: border-box;
++}
++
++body {
++    margin: 0;
++    font-family: system-ui, sans-serif;
++}
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+new file mode 100644
+index 0000000..ca9a5fd
+--- /dev/null
++++ b/src/app/layout.tsx
+@@ -0,0 +1,14 @@
++/** Root layout for the Next.js app. Wraps every page with the global SCSS
++ * reset and sets the document title. */
++import type { ReactNode } from 'react';
++import './globals.scss';
++
++export const metadata = { title: 'Research Chatbot' };
++
++export default function RootLayout({ children }: { children: ReactNode }) {
++    return (
++        <html lang="en">
++            <body>{children}</body>
++        </html>
++    );
++}
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+new file mode 100644
+index 0000000..b8c667d
+--- /dev/null
++++ b/src/app/page.tsx
+@@ -0,0 +1,6 @@
++/** Home page: renders the Chat surface as the full-page entry point. */
++import { Chat } from '@/components/Chat/Chat';
++
++export default function HomePage() {
++    return <Chat />;
++}
+diff --git a/src/clients/anthropic/createAnthropicClient.ts b/src/clients/anthropic/createAnthropicClient.ts
+new file mode 100644
+index 0000000..43f1bd8
+--- /dev/null
++++ b/src/clients/anthropic/createAnthropicClient.ts
+@@ -0,0 +1,6 @@
++/** Constructs an Anthropic SDK client from an explicit API key. */
++import Anthropic from '@anthropic-ai/sdk';
++
++export function createAnthropicClient(apiKey: string): Anthropic {
++    return new Anthropic({ apiKey });
++}
+diff --git a/src/clients/tavily/searchWeb.ts b/src/clients/tavily/searchWeb.ts
+new file mode 100644
+index 0000000..02c8bc1
+--- /dev/null
++++ b/src/clients/tavily/searchWeb.ts
+@@ -0,0 +1,33 @@
++/** Calls the Tavily search API and maps results to title/url/snippet. The
++ * API key is passed in (read from server config) rather than read here. */
++
++const TAVILY_API = 'https://api.tavily.com/search';
++
++type WebResult = { title: string; url: string; snippet: string };
++
++export async function searchWeb(
++  query: string,
++  apiKey: string,
++  maxResults = 5,
++): Promise<WebResult[]> {
++  const response = await fetch(TAVILY_API, {
++    method: 'POST',
++    headers: { 'Content-Type': 'application/json' },
++    body: JSON.stringify({
++      api_key: apiKey,
++      query,
++      max_results: maxResults,
++    }),
++  });
++  if (!response.ok) {
++    throw new Error(`Tavily search failed: ${response.status}`);
++  }
++  const data = (await response.json()) as {
++    results?: { title: string; url: string; content: string }[];
++  };
++  return (data.results ?? []).map((result) => ({
++    title: result.title,
++    url: result.url,
++    snippet: result.content,
++  }));
++}
+diff --git a/src/clients/wikipedia/getWikipediaPage.ts b/src/clients/wikipedia/getWikipediaPage.ts
+new file mode 100644
+index 0000000..a0888ad
+--- /dev/null
++++ b/src/clients/wikipedia/getWikipediaPage.ts
+@@ -0,0 +1,56 @@
++/** Fetches a Wikipedia page's plain-text extract via the MediaWiki API,
++ * truncating to MAX_ARTICLE_CHARS to bound context size. */
++import { MAX_ARTICLE_CHARS } from '@/constants/agent';
++
++const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php';
++
++type RawPage = { title?: string; extract?: string };
++type WikipediaPage = { title: string; extract: string; truncated: boolean };
++
++export async function getWikipediaPage(title: string): Promise<WikipediaPage> {
++  const url = buildPageUrl(title);
++  const response = await fetch(url);
++  if (!response.ok) {
++    throw new Error(`Wikipedia page fetch failed: ${response.status}`);
++  }
++  const data = (await response.json()) as {
++    query?: { pages?: Record<string, RawPage> };
++  };
++  const page = extractFirstPage(data, title);
++  return buildPageResult(page, title);
++}
++
++function buildPageUrl(title: string): string {
++  const params = new URLSearchParams({
++    action: 'query',
++    format: 'json',
++    origin: '*',
++    prop: 'extracts',
++    explaintext: '1',
++    redirects: '1',
++    titles: title,
++  });
++  return `${WIKIPEDIA_API}?${params}`;
++}
++
++function extractFirstPage(
++  data: { query?: { pages?: Record<string, RawPage> } },
++  title: string,
++): RawPage {
++  const pages = data.query?.pages ?? {};
++  const page = Object.values(pages)[0];
++  if (!page || page.extract === undefined) {
++    throw new Error(`Wikipedia page not found: ${title}`);
++  }
++  return page;
++}
++
++function buildPageResult(page: RawPage, fallbackTitle: string): WikipediaPage {
++  const full = page.extract as string;
++  const truncated = full.length > MAX_ARTICLE_CHARS;
++  return {
++    title: page.title ?? fallbackTitle,
++    extract: truncated ? full.slice(0, MAX_ARTICLE_CHARS) : full,
++    truncated,
++  };
++}
+diff --git a/src/clients/wikipedia/getWikipediaPageLinks.ts b/src/clients/wikipedia/getWikipediaPageLinks.ts
+new file mode 100644
+index 0000000..886cc17
+--- /dev/null
++++ b/src/clients/wikipedia/getWikipediaPageLinks.ts
+@@ -0,0 +1,26 @@
++/** Fetches the titles of articles linked from a Wikipedia page (namespace 0),
++ * used as the agent's "related articles" signal. */
++const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php';
++
++export async function getWikipediaPageLinks(title: string): Promise<string[]> {
++  const params = new URLSearchParams({
++    action: 'query',
++    format: 'json',
++    origin: '*',
++    prop: 'links',
++    plnamespace: '0',
++    pllimit: '20',
++    redirects: '1',
++    titles: title,
++  });
++  const response = await fetch(`${WIKIPEDIA_API}?${params}`);
++  if (!response.ok) {
++    throw new Error(`Wikipedia links fetch failed: ${response.status}`);
++  }
++  const data = (await response.json()) as {
++    query?: { pages?: Record<string, { links?: { title: string }[] }> };
++  };
++  const pages = data.query?.pages ?? {};
++  const page = Object.values(pages)[0];
++  return (page?.links ?? []).map((link) => link.title);
++}
+diff --git a/src/clients/wikipedia/searchWikipediaArticles.ts b/src/clients/wikipedia/searchWikipediaArticles.ts
+new file mode 100644
+index 0000000..5e6cc09
+--- /dev/null
++++ b/src/clients/wikipedia/searchWikipediaArticles.ts
+@@ -0,0 +1,35 @@
++/** Searches Wikipedia article titles via the MediaWiki API and returns
++ * title/snippet pairs with HTML markup removed. */
++const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php';
++
++type SearchResult = { title: string; snippet: string };
++
++export async function searchWikipediaArticles(
++  query: string,
++  limit = 5,
++): Promise<SearchResult[]> {
++  const params = new URLSearchParams({
++    action: 'query',
++    list: 'search',
++    srsearch: query,
++    srlimit: String(limit),
++    format: 'json',
++    origin: '*',
++  });
++  const response = await fetch(`${WIKIPEDIA_API}?${params}`);
++  if (!response.ok) {
++    throw new Error(`Wikipedia search failed: ${response.status}`);
++  }
++  const data = (await response.json()) as {
++    query?: { search?: { title: string; snippet: string }[] };
++  };
++  const hits = data.query?.search ?? [];
++  return hits.map((hit) => ({
++    title: hit.title,
++    snippet: stripHtml(hit.snippet),
++  }));
++}
++
++function stripHtml(value: string): string {
++  return value.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').trim();
++}
+diff --git a/src/components/Chat/Chat.module.scss b/src/components/Chat/Chat.module.scss
+new file mode 100644
+index 0000000..2079d87
+--- /dev/null
++++ b/src/components/Chat/Chat.module.scss
+@@ -0,0 +1,36 @@
++.chat {
++    max-width: 48rem;
++    margin: 0 auto;
++    padding: 1rem;
++    display: flex;
++    flex-direction: column;
++    min-height: 100vh;
++}
++
++.messages {
++    flex: 1;
++    overflow-y: auto;
++}
++
++.form {
++    display: flex;
++    gap: 0.5rem;
++    align-items: center;
++    padding-top: 1rem;
++}
++
++.label {
++    position: absolute;
++    width: 1px;
++    height: 1px;
++    overflow: hidden;
++    clip: rect(0 0 0 0);
++    clip-path: inset(50%);
++    white-space: nowrap;
++}
++
++.input {
++    flex: 1;
++    padding: 0.5rem;
++    font-size: 1rem;
++}
+diff --git a/src/components/Chat/Chat.tsx b/src/components/Chat/Chat.tsx
+new file mode 100644
+index 0000000..f8c6acf
+--- /dev/null
++++ b/src/components/Chat/Chat.tsx
+@@ -0,0 +1,44 @@
++/** The chat surface: message list plus a labelled input that sends to the
++ * research agent and renders streamed answers and tool steps. */
++'use client';
++
++import { useState } from 'react';
++import { Message } from '@/components/Message/Message';
++import { useChatStream } from '@/state/useChatStream';
++import styles from './Chat.module.scss';
++
++export function Chat() {
++    const { messages, send, isStreaming } = useChatStream();
++    const [draft, setDraft] = useState('');
++
++    function handleSubmit(event: React.FormEvent) {
++        event.preventDefault();
++        send(draft);
++        setDraft('');
++    }
++
++    return (
++        <main className={styles.chat}>
++            <div className={styles.messages}>
++                {messages.map((message, index) => (
++                    <Message key={index} message={message} />
++                ))}
++            </div>
++            <form className={styles.form} onSubmit={handleSubmit}>
++                <label htmlFor="message" className={styles.label}>
++                    Message
++                </label>
++                <input
++                    id="message"
++                    className={styles.input}
++                    value={draft}
++                    onChange={(event) => setDraft(event.target.value)}
++                    placeholder="Ask for an overview or a dossier..."
++                />
++                <button type="submit" disabled={isStreaming}>
++                    Send
++                </button>
++            </form>
++        </main>
++    );
++}
+diff --git a/src/components/Message/Message.module.scss b/src/components/Message/Message.module.scss
+new file mode 100644
+index 0000000..801265a
+--- /dev/null
++++ b/src/components/Message/Message.module.scss
+@@ -0,0 +1,23 @@
++.user,
++.assistant {
++    padding: 0.75rem 1rem;
++    margin: 0.5rem 0;
++    border-radius: 0.5rem;
++}
++
++.user {
++    background: #e8eef6;
++}
++
++.assistant {
++    background: #f4f1ea;
++}
++
++.text {
++    margin: 0;
++    white-space: pre-wrap;
++}
++
++.steps {
++    margin-bottom: 0.5rem;
++}
+diff --git a/src/components/Message/Message.tsx b/src/components/Message/Message.tsx
+new file mode 100644
+index 0000000..0017ad8
+--- /dev/null
++++ b/src/components/Message/Message.tsx
+@@ -0,0 +1,20 @@
++/** Renders a single chat message: tool steps (for assistant turns) followed
++ * by the message text. */
++import { ToolStep } from '@/components/ToolStep/ToolStep';
++import type { DisplayMessage } from '@/state/useChatStream';
++import styles from './Message.module.scss';
++
++export function Message({ message }: { message: DisplayMessage }) {
++    return (
++        <div className={styles[message.role]}>
++            {message.toolSteps.length > 0 ? (
++                <div className={styles.steps}>
++                    {message.toolSteps.map((step, index) => (
++                        <ToolStep key={index} step={step} />
++                    ))}
++                </div>
++            ) : null}
++            {message.content ? <p className={styles.text}>{message.content}</p> : null}
++        </div>
++    );
++}
+diff --git a/src/components/ToolStep/ToolStep.module.scss b/src/components/ToolStep/ToolStep.module.scss
+new file mode 100644
+index 0000000..b6daf6d
+--- /dev/null
++++ b/src/components/ToolStep/ToolStep.module.scss
+@@ -0,0 +1,22 @@
++.step {
++    display: flex;
++    gap: 0.5rem;
++    align-items: baseline;
++    font-size: 0.85rem;
++    padding: 0.25rem 0.5rem;
++    border-left: 2px solid #888;
++    margin: 0.25rem 0;
++}
++
++.name {
++    font-weight: 600;
++}
++
++.input {
++    font-style: italic;
++}
++
++.summary {
++    color: #666;
++    margin-left: auto;
++}
+diff --git a/src/components/ToolStep/ToolStep.tsx b/src/components/ToolStep/ToolStep.tsx
+new file mode 100644
+index 0000000..5cbc05b
+--- /dev/null
++++ b/src/components/ToolStep/ToolStep.tsx
+@@ -0,0 +1,26 @@
++/** Renders one agent tool-use step: the tool name, its input, and a result
++ * summary once available. */
++import type { ToolStep as ToolStepData } from '@/types/chat';
++import styles from './ToolStep.module.scss';
++
++export function ToolStep({ step }: { step: ToolStepData }) {
++    const label = describeInput(step.input);
++    return (
++        <div className={styles.step} aria-label={`Tool: ${step.name}`}>
++            <span className={styles.name}>{step.name}</span>
++            {label ? <span className={styles.input}>{label}</span> : null}
++            <span className={styles.summary}>{step.summary ?? 'running...'}</span>
++        </div>
++    );
++}
++
++function describeInput(input: unknown): string {
++    if (input && typeof input === 'object') {
++        const record = input as Record<string, unknown>;
++        const value = record.query ?? record.title;
++        if (typeof value === 'string') {
++            return value;
++        }
++    }
++    return '';
++}
+diff --git a/src/config/loadServerConfig.ts b/src/config/loadServerConfig.ts
+new file mode 100644
+index 0000000..9ccb79a
+--- /dev/null
++++ b/src/config/loadServerConfig.ts
+@@ -0,0 +1,21 @@
++/** Loads and validates server-only environment variables. Throws a clear
++ * error naming any missing variable so startup fails fast. */
++type ServerConfig = {
++  anthropicApiKey: string;
++  tavilyApiKey: string;
++};
++
++export function loadServerConfig(): ServerConfig {
++  const anthropicApiKey = requireEnv('ANTHROPIC_API_KEY');
++  const tavilyApiKey = requireEnv('TAVILY_API_KEY');
++
++  return { anthropicApiKey, tavilyApiKey };
++}
++
++function requireEnv(name: string): string {
++  const value = process.env[name];
++  if (!value) {
++    throw new Error(`Missing required environment variable: ${name}`);
++  }
++  return value;
++}
+diff --git a/src/constants/agent.ts b/src/constants/agent.ts
+new file mode 100644
+index 0000000..4c1f6b8
+--- /dev/null
++++ b/src/constants/agent.ts
+@@ -0,0 +1,4 @@
++/** Agent-loop and tool-output limits. */
++export const MAX_AGENT_ITERATIONS = 8;
++export const MAX_ARTICLE_CHARS = 6000;
++export const DEFAULT_SEARCH_LIMIT = 5;
+diff --git a/src/constants/models.ts b/src/constants/models.ts
+new file mode 100644
+index 0000000..bea94e9
+--- /dev/null
++++ b/src/constants/models.ts
+@@ -0,0 +1,6 @@
++/** Model identifiers and Anthropic call tuning. Swap AGENT_MODEL to
++ * 'claude-sonnet-4-6' to reduce eval cost. */
++export const AGENT_MODEL = 'claude-opus-4-8';
++export const JUDGE_MODEL = 'claude-opus-4-8';
++export const EFFORT = 'high' as const;
++export const MAX_TOKENS = 8000;
+diff --git a/src/prompts/judgePrompt.ts b/src/prompts/judgePrompt.ts
+new file mode 100644
+index 0000000..68adbda
+--- /dev/null
++++ b/src/prompts/judgePrompt.ts
+@@ -0,0 +1,15 @@
++/** System prompt for the eval judge. Asks for per-axis 1-10 scores grounded
++ * in the rubric and reference facts. */
++export const JUDGE_PROMPT = [
++    'You are a strict evaluator of research assistant answers.',
++    'Score the answer on four axes from 1 (poor) to 10 (excellent):',
++    '- factuality: are claims correct and consistent with the reference facts?',
++    '- citationUse: are sources (article titles, URLs) cited for key claims?',
++    '- completeness: does it cover what the rubric asks?',
++    '- toolEfficiency: did the tool trajectory look purposeful, not wasteful?',
++    'Set pass=true only if factuality and completeness are both >= 7.',
++    'Give a one or two sentence rationale. Be specific and critical.',
++    'Respond with ONLY a JSON object (no prose, no markdown fences) with exactly these keys:',
++    'factuality, citationUse, completeness, toolEfficiency (each an integer 1-10),',
++    'rationale (string), pass (boolean).',
++].join('\n');
+diff --git a/src/prompts/researchSystemPrompt.ts b/src/prompts/researchSystemPrompt.ts
+new file mode 100644
+index 0000000..2f32a05
+--- /dev/null
++++ b/src/prompts/researchSystemPrompt.ts
+@@ -0,0 +1,15 @@
++/** System prompt for the research agent. Instructs grounded, cited answers
++ * and judicious tool use. */
++export const RESEARCH_SYSTEM_PROMPT = [
++    'You are a research assistant. Answer the user by gathering information',
++    'with your tools, then writing a clear, well-organized synthesis.',
++    '',
++    'Guidelines:',
++    '- Prefer search_wikipedia and get_wikipedia_article for encyclopedic',
++    '  topics (people, companies, history, science).',
++    '- Use web_search for current events or topics Wikipedia covers poorly.',
++    '- Use get_related_articles to find adjacent topics worth including.',
++    '- Cite the article titles or URLs you drew facts from.',
++    '- If sources conflict or are thin, say so rather than guessing.',
++    '- Stop calling tools once you have enough to answer well.',
++].join('\n');
+diff --git a/src/services/agent/agentSink.ts b/src/services/agent/agentSink.ts
+new file mode 100644
+index 0000000..a090e09
+--- /dev/null
++++ b/src/services/agent/agentSink.ts
+@@ -0,0 +1,13 @@
++/** Callback interface the agent loop calls as events occur, decoupling the
++ * loop from its consumer (SSE route vs eval collector).
++ *
++ * TODO(future): migrate to an async generator (the loop yields events and
++ * callers `for await` them). Callback form chosen for readability here. */
++export type AgentSink = {
++    onThinking: (delta: string) => void;
++    onText: (delta: string) => void;
++    onToolCall: (name: string, input: unknown) => void;
++    onToolResult: (name: string, summary: string) => void;
++    onDone: (finalText: string) => void;
++    onError: (message: string) => void;
++};
+diff --git a/src/services/agent/executeToolCall.ts b/src/services/agent/executeToolCall.ts
+new file mode 100644
+index 0000000..f5d8191
+--- /dev/null
++++ b/src/services/agent/executeToolCall.ts
+@@ -0,0 +1,24 @@
++/** Executes one tool by name, converting any failure into a structured
++ * error result so the agent loop can feed it back to the model. */
++import { toolRegistry } from '@/services/agent/toolRegistry';
++import type { ToolDeps } from '@/tools/agentTool';
++
++type ToolCallResult = { content: string; isError: boolean };
++
++export async function executeToolCall(
++    name: string,
++    input: unknown,
++    deps: ToolDeps,
++): Promise<ToolCallResult> {
++    const tool = toolRegistry[name];
++    if (!tool) {
++        return { content: `Unknown tool: ${name}`, isError: true };
++    }
++    try {
++        const content = await tool.execute(input, deps);
++        return { content, isError: false };
++    } catch (error) {
++        const message = error instanceof Error ? error.message : String(error);
++        return { content: `Tool error: ${message}`, isError: true };
++    }
++}
+diff --git a/src/services/agent/runResearchAgent.ts b/src/services/agent/runResearchAgent.ts
+new file mode 100644
+index 0000000..feb523b
+--- /dev/null
++++ b/src/services/agent/runResearchAgent.ts
+@@ -0,0 +1,123 @@
++/** The tool-use loop. Streams model output to the sink, executes any tool
++ * calls, and repeats until the model ends its turn, refuses, or the
++ * iteration cap is hit. Decoupled from its consumer via AgentSink.
++ *
++ * TODO(future): yield events from an async generator instead of pushing to a
++ * sink (see agentSink.ts). */
++import { EFFORT, MAX_TOKENS, AGENT_MODEL } from '@/constants/models';
++import { MAX_AGENT_ITERATIONS } from '@/constants/agent';
++import { RESEARCH_SYSTEM_PROMPT } from '@/prompts/researchSystemPrompt';
++import { executeToolCall } from '@/services/agent/executeToolCall';
++import { toolSchemas } from '@/services/agent/toolRegistry';
++import type { AgentSink } from '@/services/agent/agentSink';
++import type { ToolDeps } from '@/tools/agentTool';
++import type Anthropic from '@anthropic-ai/sdk';
++
++type RunOptions = {
++    client: Anthropic;
++    sink: AgentSink;
++    deps: ToolDeps;
++};
++
++export async function runResearchAgent(
++    messages: Anthropic.MessageParam[],
++    { client, sink, deps }: RunOptions,
++): Promise<void> {
++    const working = [...messages];
++
++    for (let iteration = 0; iteration < MAX_AGENT_ITERATIONS; iteration += 1) {
++        const stream = client.messages.stream({
++            model: AGENT_MODEL,
++            max_tokens: MAX_TOKENS,
++            system: RESEARCH_SYSTEM_PROMPT,
++            tools: toolSchemas,
++            messages: working,
++            thinking: { type: 'adaptive', display: 'summarized' },
++            output_config: { effort: EFFORT },
++        } as unknown as Anthropic.MessageStreamParams);
++
++        for await (const event of stream) {
++            streamDeltaToSink(event, sink);
++        }
++        const final = await stream.finalMessage();
++        working.push({ role: 'assistant', content: final.content });
++
++        if (final.stop_reason === 'refusal') {
++            sink.onError('The model declined to answer this request.');
++            return;
++        }
++        if (final.stop_reason !== 'tool_use') {
++            sink.onDone(textOf(final.content));
++            return;
++        }
++
++        const toolResults = await runToolCalls(final.content, sink, deps);
++        working.push({ role: 'user', content: toolResults });
++    }
++
++    sink.onError('Reached the maximum number of agent iterations.');
++}
++
++function streamDeltaToSink(event: unknown, sink: AgentSink): void {
++    const typed = event as {
++        type?: string;
++        delta?: { type?: string; text?: string; thinking?: string };
++    };
++    if (typed.type !== 'content_block_delta' || !typed.delta) {
++        return;
++    }
++    if (typed.delta.type === 'text_delta' && typed.delta.text) {
++        sink.onText(typed.delta.text);
++    } else if (typed.delta.type === 'thinking_delta' && typed.delta.thinking) {
++        sink.onThinking(typed.delta.thinking);
++    }
++}
++
++async function runToolCalls(
++    content: Anthropic.ContentBlock[],
++    sink: AgentSink,
++    deps: ToolDeps,
++): Promise<Anthropic.ToolResultBlockParam[]> {
++    const results: Anthropic.ToolResultBlockParam[] = [];
++    for (const block of content) {
++        if (block.type !== 'tool_use') {
++            continue;
++        }
++        sink.onToolCall(block.name, block.input);
++        const { content: resultContent, isError } = await executeToolCall(
++            block.name,
++            block.input,
++            deps,
++        );
++        sink.onToolResult(block.name, summarize(resultContent));
++        results.push({
++            type: 'tool_result',
++            tool_use_id: block.id,
++            content: resultContent,
++            is_error: isError,
++        });
++    }
++    return results;
++}
++
++function textOf(content: Anthropic.ContentBlock[]): string {
++    return content
++        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
++        .map((block) => block.text)
++        .join('');
++}
++
++function summarize(content: string): string {
++    try {
++        const parsed: unknown = JSON.parse(content);
++        if (Array.isArray(parsed)) {
++            return `${parsed.length} result(s)`;
++        }
++        if (parsed && typeof parsed === 'object' && 'title' in parsed) {
++            return `read "${(parsed as { title: string }).title}"`;
++        }
++    } catch {
++        // not JSON; fall through
++    }
++    return content.length > 80 ? `${content.slice(0, 80)}...` : content;
++}
+diff --git a/src/services/agent/toolRegistry.ts b/src/services/agent/toolRegistry.ts
+new file mode 100644
+index 0000000..02f0271
+--- /dev/null
++++ b/src/services/agent/toolRegistry.ts
+@@ -0,0 +1,19 @@
++/** Maps tool names to their AgentTool and exposes the schema list for the
++ * Anthropic request. */
++import getRelatedArticles from '@/tools/getRelatedArticles';
++import getWikipediaArticle from '@/tools/getWikipediaArticle';
++import searchWikipedia from '@/tools/searchWikipedia';
++import webSearch from '@/tools/webSearch';
++import type { AgentTool } from '@/tools/agentTool';
++import type Anthropic from '@anthropic-ai/sdk';
++
++export const toolRegistry: Record<string, AgentTool> = {
++    search_wikipedia: searchWikipedia,
++    get_wikipedia_article: getWikipediaArticle,
++    get_related_articles: getRelatedArticles,
++    web_search: webSearch,
++};
++
++export const toolSchemas: Anthropic.Tool[] = Object.values(toolRegistry).map(
++    (tool) => tool.schema,
++);
+diff --git a/src/services/eval/collectAgentRun.ts b/src/services/eval/collectAgentRun.ts
+new file mode 100644
+index 0000000..3d35320
+--- /dev/null
++++ b/src/services/eval/collectAgentRun.ts
+@@ -0,0 +1,44 @@
++/** Runs the research agent for one question with a collecting sink, returning
++ * the final answer and the tool trajectory for the judge. */
++import { runResearchAgent } from '@/services/agent/runResearchAgent';
++import type { AgentSink } from '@/services/agent/agentSink';
++import type { ToolDeps } from '@/tools/agentTool';
++import type { EvalRunOutput } from '@/types/eval';
++import type Anthropic from '@anthropic-ai/sdk';
++
++type CollectOptions = { client: Anthropic; deps: ToolDeps };
++
++export async function collectAgentRun(
++    question: string,
++    { client, deps }: CollectOptions,
++): Promise<EvalRunOutput> {
++    const toolsUsed: string[] = [];
++    let finalAnswer = '';
++    let iterationCount = 0;
++
++    const sink: AgentSink = {
++        onThinking: () => {},
++        onText: (delta) => {
++            finalAnswer += delta;
++        },
++        onToolCall: (name) => {
++            toolsUsed.push(name);
++            iterationCount += 1;
++        },
++        onToolResult: () => {},
++        onDone: (text) => {
++            finalAnswer = text;
++        },
++        onError: (message) => {
++            finalAnswer = finalAnswer || `[error: ${message}]`;
++        },
++    };
++
++    await runResearchAgent([{ role: 'user', content: question }], {
++        client,
++        sink,
++        deps,
++    });
++
++    return { finalAnswer, toolsUsed, iterationCount: Math.max(iterationCount, 1) };
++}
+diff --git a/src/services/eval/judgeResult.ts b/src/services/eval/judgeResult.ts
+new file mode 100644
+index 0000000..4d33a6e
+--- /dev/null
++++ b/src/services/eval/judgeResult.ts
+@@ -0,0 +1,41 @@
++/** Scores one agent run against its rubric using the judge model, then
++ * re-validates the result against ScoreSchema. Uses client.messages.create
++ * with a JSON-only system prompt; JSON.parse extracts the score object. */
++import { JUDGE_MODEL, MAX_TOKENS } from '@/constants/models';
++import { JUDGE_PROMPT } from '@/prompts/judgePrompt';
++import { ScoreSchema } from '@/services/eval/scoreSchema';
++import type { EvalItem, EvalRunOutput, Score } from '@/types/eval';
++import type Anthropic from '@anthropic-ai/sdk';
++
++export async function judgeResult(
++    item: EvalItem,
++    run: EvalRunOutput,
++    client: Anthropic,
++): Promise<Score> {
++    const userContent = [
++        `Question: ${item.question}`,
++        `Rubric: ${item.rubric}`,
++        item.referenceFacts
++            ? `Reference facts:\n- ${item.referenceFacts.join('\n- ')}`
++            : 'Reference facts: none provided',
++        `Tools used: ${run.toolsUsed.join(', ') || 'none'}`,
++        `Answer:\n${run.finalAnswer}`,
++    ].join('\n\n');
++
++    const response = await client.messages.create({
++        model: JUDGE_MODEL,
++        max_tokens: MAX_TOKENS,
++        system: JUDGE_PROMPT,
++        messages: [{ role: 'user', content: userContent }],
++    });
++
++    const textBlock = response.content.find((block) => block.type === 'text');
++    if (textBlock === undefined || !('text' in textBlock) || typeof textBlock.text !== 'string') {
++        throw new Error('Judge returned no text content');
++    }
++
++    const raw = textBlock.text.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
++    const parsed: unknown = JSON.parse(raw);
++
++    return ScoreSchema.parse(parsed);
++}
+diff --git a/src/services/eval/scoreSchema.ts b/src/services/eval/scoreSchema.ts
+new file mode 100644
+index 0000000..9089556
+--- /dev/null
++++ b/src/services/eval/scoreSchema.ts
+@@ -0,0 +1,11 @@
++/** Zod schema for the LLM judge's structured score output. */
++import { z } from 'zod';
++
++export const ScoreSchema = z.object({
++    factuality: z.number().min(1).max(10),
++    citationUse: z.number().min(1).max(10),
++    completeness: z.number().min(1).max(10),
++    toolEfficiency: z.number().min(1).max(10),
++    rationale: z.string(),
++    pass: z.boolean(),
++});
+diff --git a/src/services/eval/writeReport.ts b/src/services/eval/writeReport.ts
+new file mode 100644
+index 0000000..a294d55
+--- /dev/null
++++ b/src/services/eval/writeReport.ts
+@@ -0,0 +1,54 @@
++/** Builds the human-readable markdown report and the full JSON dump from a
++ * set of eval results. Returns strings; the runner writes them to disk. */
++import type { EvalResult } from '@/types/eval';
++
++type NumericAxis = 'factuality' | 'citationUse' | 'completeness' | 'toolEfficiency';
++
++const AXES: NumericAxis[] = [
++    'factuality',
++    'citationUse',
++    'completeness',
++    'toolEfficiency',
++];
++
++export function writeReport(results: EvalResult[]): {
++    markdown: string;
++    json: string;
++} {
++    const passCount = results.filter((r) => r.score.pass).length;
++    const averages = AXES.map(
++        (axis) => `${axis}: ${average(results, axis).toFixed(1)}`,
++    );
++
++    const rows = results.map(
++        (r) =>
++            `| ${r.item.id} | ${r.score.factuality} | ${r.score.citationUse} | ` +
++            `${r.score.completeness} | ${r.score.toolEfficiency} | ` +
++            `${r.score.pass ? 'PASS' : 'FAIL'} | ${r.score.rationale} |`,
++    );
++
++    const markdown = [
++        '# Eval Report',
++        '',
++        '> Scores are produced by an LLM judge and are directional, not exact.',
++        '',
++        `**${passCount}/${results.length} passed**`,
++        '',
++        `Averages: ${averages.join(', ')}`,
++        '',
++        '| id | fact | cite | compl | toolEff | result | rationale |',
++        '| --- | --- | --- | --- | --- | --- | --- |',
++        ...rows,
++        '',
++    ].join('\n');
++
++    return { markdown, json: JSON.stringify(results, null, 2) };
++}
++
++function average(results: EvalResult[], axis: NumericAxis): number {
++    if (results.length === 0) {
++        return 0;
++    }
++    const total = results.reduce((sum, r) => sum + Number(r.score[axis]), 0);
++    return total / results.length;
++}
+diff --git a/src/services/sse/encodeSseEvent.ts b/src/services/sse/encodeSseEvent.ts
+new file mode 100644
+index 0000000..a9d3db7
+--- /dev/null
++++ b/src/services/sse/encodeSseEvent.ts
+@@ -0,0 +1,6 @@
++/** Serializes one SseEvent into a Server-Sent Events `data:` frame. */
++import type { SseEvent } from '@/types/chat';
++
++export function encodeSseEvent(event: SseEvent): string {
++    return `data: ${JSON.stringify(event)}\n\n`;
++}
+diff --git a/src/state/useChatStream.ts b/src/state/useChatStream.ts
+new file mode 100644
+index 0000000..314c218
+--- /dev/null
++++ b/src/state/useChatStream.ts
+@@ -0,0 +1,87 @@
++/** React hook that drives a chat conversation: sends history to /api/chat via
++ * streamChat and accumulates streamed text and tool steps per assistant turn. */
++'use client';
++
++import { useCallback, useState } from 'react';
++import { streamChat } from '@/api/streamChat';
++import type { ChatMessage, ChatRole, SseEvent, ToolStep } from '@/types/chat';
++
++export type DisplayMessage = {
++    role: ChatRole;
++    content: string;
++    toolSteps: ToolStep[];
++};
++
++type UseChatStream = {
++    messages: DisplayMessage[];
++    send: (text: string) => void;
++    isStreaming: boolean;
++};
++
++export function useChatStream(): UseChatStream {
++    const [messages, setMessages] = useState<DisplayMessage[]>([]);
++    const [isStreaming, setIsStreaming] = useState(false);
++
++    const send = useCallback(
++        (text: string) => {
++            if (!text.trim() || isStreaming) {
++                return;
++            }
++            const userMessage: DisplayMessage = {
++                role: 'user',
++                content: text,
++                toolSteps: [],
++            };
++            const history: ChatMessage[] = [...messages, userMessage].map((m) => ({
++                role: m.role,
++                content: m.content,
++            }));
++
++            setMessages((prev) => [
++                ...prev,
++                userMessage,
++                { role: 'assistant', content: '', toolSteps: [] },
++            ]);
++            setIsStreaming(true);
++
++            async function runStream(): Promise<void> {
++                await streamChat(history, (event) => {
++                    setMessages((prev) => applyEvent(prev, event));
++                });
++            }
++            void runStream().finally(() => setIsStreaming(false));
++        },
++        [isStreaming, messages],
++    );
++
++    return { messages, send, isStreaming };
++}
++
++function applyEvent(messages: DisplayMessage[], event: SseEvent): DisplayMessage[] {
++    const next = [...messages];
++    const last = next[next.length - 1];
++    if (!last || last.role !== 'assistant') {
++        return next;
++    }
++    if (event.type === 'text') {
++        next[next.length - 1] = { ...last, content: last.content + event.delta };
++    } else if (event.type === 'tool_call') {
++        next[next.length - 1] = {
++            ...last,
++            toolSteps: [...last.toolSteps, { name: event.name, input: event.input, summary: null }],
++        };
++    } else if (event.type === 'tool_result') {
++        next[next.length - 1] = {
++            ...last,
++            toolSteps: last.toolSteps.map((step, index) =>
++                index === last.toolSteps.length - 1 ? { ...step, summary: event.summary } : step,
++            ),
++        };
++    } else if (event.type === 'error') {
++        next[next.length - 1] = {
++            ...last,
++            content: last.content + `\n[error: ${event.message}]`,
++        };
++    }
++    return next;
++}
+diff --git a/src/tools/agentTool.ts b/src/tools/agentTool.ts
+new file mode 100644
+index 0000000..47ba4df
+--- /dev/null
++++ b/src/tools/agentTool.ts
+@@ -0,0 +1,10 @@
++/** Shared shape for an agent tool: an Anthropic schema plus an execute()
++ * that returns the tool_result content string. */
++import type Anthropic from '@anthropic-ai/sdk';
++
++export type ToolDeps = { tavilyApiKey: string };
++
++export type AgentTool = {
++    schema: Anthropic.Tool;
++    execute: (input: unknown, deps: ToolDeps) => Promise<string>;
++};
+diff --git a/src/tools/getRelatedArticles.ts b/src/tools/getRelatedArticles.ts
+new file mode 100644
+index 0000000..9a14bfb
+--- /dev/null
++++ b/src/tools/getRelatedArticles.ts
+@@ -0,0 +1,29 @@
++/** Agent tool: list articles related to (linked from) a Wikipedia page. */
++import { getWikipediaPageLinks } from '@/clients/wikipedia/getWikipediaPageLinks';
++import type { AgentTool } from '@/tools/agentTool';
++
++const getRelatedArticles: AgentTool = {
++    schema: {
++        name: 'get_related_articles',
++        description:
++            'List Wikipedia article titles related to (linked from) a given ' +
++            'article. Call this to discover adjacent topics worth reading.',
++        input_schema: {
++            type: 'object',
++            properties: {
++                title: { type: 'string', description: 'Exact article title' },
++            },
++            required: ['title'],
++        },
++    },
++    execute: async (input) => {
++        const { title } = input as { title?: string };
++        if (!title || !title.trim()) {
++            throw new Error('get_related_articles requires a non-empty title');
++        }
++        const links = await getWikipediaPageLinks(title);
++        return JSON.stringify(links);
++    },
++};
++
++export default getRelatedArticles;
+diff --git a/src/tools/getWikipediaArticle.ts b/src/tools/getWikipediaArticle.ts
+new file mode 100644
+index 0000000..b6ab108
+--- /dev/null
++++ b/src/tools/getWikipediaArticle.ts
+@@ -0,0 +1,29 @@
++/** Agent tool: fetch the plain-text extract of a Wikipedia article. */
++import { getWikipediaPage } from '@/clients/wikipedia/getWikipediaPage';
++import type { AgentTool } from '@/tools/agentTool';
++
++const getWikipediaArticle: AgentTool = {
++    schema: {
++        name: 'get_wikipedia_article',
++        description:
++            'Fetch the full plain-text content of a Wikipedia article by its exact ' +
++            'title. Call this after search_wikipedia to read an article you found.',
++        input_schema: {
++            type: 'object',
++            properties: {
++                title: { type: 'string', description: 'Exact article title' },
++            },
++            required: ['title'],
++        },
++    },
++    execute: async (input) => {
++        const { title } = input as { title?: string };
++        if (!title || !title.trim()) {
++            throw new Error('get_wikipedia_article requires a non-empty title');
++        }
++        const page = await getWikipediaPage(title);
++        return JSON.stringify(page);
++    },
++};
++
++export default getWikipediaArticle;
+diff --git a/src/tools/searchWikipedia.ts b/src/tools/searchWikipedia.ts
+new file mode 100644
+index 0000000..0cf8a40
+--- /dev/null
++++ b/src/tools/searchWikipedia.ts
+@@ -0,0 +1,36 @@
++/** Agent tool: search Wikipedia article titles. Wraps the Wikipedia client
++ * and validates input before calling it. */
++import { searchWikipediaArticles } from '@/clients/wikipedia/searchWikipediaArticles';
++import { DEFAULT_SEARCH_LIMIT } from '@/constants/agent';
++import type { AgentTool } from '@/tools/agentTool';
++
++const searchWikipedia: AgentTool = {
++    schema: {
++        name: 'search_wikipedia',
++        description:
++            'Search Wikipedia for article titles matching a query. Call this first ' +
++            'when you need to find which articles exist about a topic, person, ' +
++            'company, or event.',
++        input_schema: {
++            type: 'object',
++            properties: {
++                query: { type: 'string', description: 'Search terms' },
++                limit: { type: 'integer', description: 'Max results (default 5)' },
++            },
++            required: ['query'],
++        },
++    },
++    execute: async (input) => {
++        const { query, limit } = input as { query?: string; limit?: number };
++        if (!query || !query.trim()) {
++            throw new Error('search_wikipedia requires a non-empty query');
++        }
++        const results = await searchWikipediaArticles(
++            query,
++            limit ?? DEFAULT_SEARCH_LIMIT,
++        );
++        return JSON.stringify(results);
++    },
++};
++
++export default searchWikipedia;
+diff --git a/src/tools/webSearch.ts b/src/tools/webSearch.ts
+new file mode 100644
+index 0000000..b7e11d9
+--- /dev/null
++++ b/src/tools/webSearch.ts
+@@ -0,0 +1,30 @@
++/** Agent tool: general web search via Tavily, for current or
++ * non-encyclopedic information not covered well by Wikipedia. */
++import { searchWeb } from '@/clients/tavily/searchWeb';
++import type { AgentTool } from '@/tools/agentTool';
++
++const webSearch: AgentTool = {
++    schema: {
++        name: 'web_search',
++        description:
++            'Search the web for current or non-encyclopedic information. Call this ' +
++            'when Wikipedia is unlikely to cover the topic, or you need recent news.',
++        input_schema: {
++            type: 'object',
++            properties: {
++                query: { type: 'string', description: 'Search terms' },
++            },
++            required: ['query'],
++        },
++    },
++    execute: async (input, deps) => {
++        const { query } = input as { query?: string };
++        if (!query || !query.trim()) {
++            throw new Error('web_search requires a non-empty query');
++        }
++        const results = await searchWeb(query, deps.tavilyApiKey);
++        return JSON.stringify(results);
++    },
++};
++
++export default webSearch;
+diff --git a/src/types/chat.ts b/src/types/chat.ts
+new file mode 100644
+index 0000000..4d63c71
+--- /dev/null
++++ b/src/types/chat.ts
+@@ -0,0 +1,21 @@
++/** Shared chat and streaming types used by the agent, route, and UI. */
++export type ChatRole = 'user' | 'assistant';
++
++export type ChatMessage = {
++    role: ChatRole;
++    content: string;
++};
++
++export type ToolStep = {
++    name: string;
++    input: unknown;
++    summary: string | null;
++};
++
++export type SseEvent =
++    | { type: 'thinking'; delta: string }
++    | { type: 'text'; delta: string }
++    | { type: 'tool_call'; name: string; input: unknown }
++    | { type: 'tool_result'; name: string; summary: string }
++    | { type: 'done' }
++    | { type: 'error'; message: string };
+diff --git a/src/types/eval.ts b/src/types/eval.ts
+new file mode 100644
+index 0000000..2bbf7a2
+--- /dev/null
++++ b/src/types/eval.ts
+@@ -0,0 +1,28 @@
++/** Types for the offline eval dataset, run output, and judge scores. */
++export type EvalItem = {
++    id: string;
++    question: string;
++    rubric: string;
++    referenceFacts?: string[];
++};
++
++export type EvalRunOutput = {
++    finalAnswer: string;
++    toolsUsed: string[];
++    iterationCount: number;
++};
++
++export type Score = {
++    factuality: number;
++    citationUse: number;
++    completeness: number;
++    toolEfficiency: number;
++    rationale: string;
++    pass: boolean;
++};
++
++export type EvalResult = {
++    item: EvalItem;
++    run: EvalRunOutput;
++    score: Score;
++};
+diff --git a/tsconfig.json b/tsconfig.json
+new file mode 100644
+index 0000000..c45ec8d
+--- /dev/null
++++ b/tsconfig.json
+@@ -0,0 +1,20 @@
++{
++    "compilerOptions": {
++        "target": "ES2022",
++        "lib": ["dom", "dom.iterable", "ES2022"],
++        "module": "esnext",
++        "moduleResolution": "bundler",
++        "jsx": "preserve",
++        "strict": true,
++        "noEmit": true,
++        "esModuleInterop": true,
++        "resolveJsonModule": true,
++        "isolatedModules": true,
++        "skipLibCheck": true,
++        "incremental": true,
++        "plugins": [{ "name": "next" }],
++        "paths": { "@/*": ["./src/*"] }
++    },
++    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
++    "exclude": ["node_modules"]
++}
+diff --git a/vitest.config.ts b/vitest.config.ts
+new file mode 100644
+index 0000000..7a137cb
+--- /dev/null
++++ b/vitest.config.ts
+@@ -0,0 +1,13 @@
++import react from '@vitejs/plugin-react';
++import { resolve } from 'path';
++import { defineConfig } from 'vitest/config';
++
++export default defineConfig({
++    plugins: [react()],
++    resolve: { alias: { '@': resolve(__dirname, 'src') } },
++    test: {
++        environment: 'jsdom',
++        globals: true,
++        setupFiles: ['./src/__tests__/setup.ts'],
++    },
++});

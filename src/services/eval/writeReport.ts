@@ -4,21 +4,14 @@ import type { EvalResult } from '@/types/eval';
 
 type NumericAxis = 'factuality' | 'citationUse' | 'completeness' | 'toolEfficiency';
 
-const AXES: NumericAxis[] = [
-    'factuality',
-    'citationUse',
-    'completeness',
-    'toolEfficiency',
-];
+const AXES: NumericAxis[] = ['factuality', 'citationUse', 'completeness', 'toolEfficiency'];
 
 export function writeReport(results: EvalResult[]): {
     markdown: string;
     json: string;
 } {
     const passCount = results.filter((r) => r.score.pass).length;
-    const averages = AXES.map(
-        (axis) => `${axis}: ${average(results, axis).toFixed(1)}`,
-    );
+    const averages = AXES.map((axis) => `${axis}: ${average(results, axis).toFixed(1)}`);
 
     const rows = results.map(
         (r) =>

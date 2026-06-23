@@ -4,7 +4,7 @@ vi.mock('@/clients/wikipedia/getWikipediaPageLinks', () => ({
     getWikipediaPageLinks: vi.fn(async () => ['Claude', 'AI safety']),
 }));
 
-import getRelatedArticles from '@/tools/getRelatedArticles';
+import { getRelatedArticles } from '@/tools/getRelatedArticles';
 import { getWikipediaPageLinks } from '@/clients/wikipedia/getWikipediaPageLinks';
 
 describe('getRelatedArticles tool', () => {
@@ -16,10 +16,7 @@ describe('getRelatedArticles tool', () => {
     });
 
     it('calls the client and returns the results as a JSON string', async () => {
-        const out = await getRelatedArticles.execute(
-            { title: 'Anthropic' },
-            { tavilyApiKey: 'x' },
-        );
+        const out = await getRelatedArticles.execute({ title: 'Anthropic' }, { tavilyApiKey: 'x' });
         expect(getWikipediaPageLinks).toHaveBeenCalledWith('Anthropic');
         expect(JSON.parse(out)).toEqual(['Claude', 'AI safety']);
     });

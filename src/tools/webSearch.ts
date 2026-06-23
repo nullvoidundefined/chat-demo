@@ -3,7 +3,7 @@
 import { searchWeb } from '@/clients/tavily/searchWeb';
 import type { AgentTool } from '@/tools/agentTool';
 
-const webSearch: AgentTool = {
+export const webSearch: AgentTool = {
     schema: {
         name: 'web_search',
         description:
@@ -26,5 +26,3 @@ const webSearch: AgentTool = {
         return JSON.stringify(results);
     },
 };
-
-export default webSearch;
