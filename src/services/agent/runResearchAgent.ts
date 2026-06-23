@@ -34,7 +34,7 @@ export async function runResearchAgent(
             messages: working,
             thinking: { type: 'adaptive', display: 'summarized' },
             output_config: { effort: EFFORT },
-        } as unknown as Anthropic.MessageStreamParams);
+        });
 
         for await (const event of stream) {
             streamDeltaToSink(event, sink);
