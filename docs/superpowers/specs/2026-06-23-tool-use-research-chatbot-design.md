@@ -57,8 +57,9 @@ Out of scope (listed so the omissions are explicit, not silent):
 - Web search: Tavily, wrapped as a third-party client (mirrors Doppelscript's
   `clients/tavily.ts`). Anthropic's server-side `web_search` tool is a noted
   alternative but not used, because wiring a custom tool is the teaching point.
-- Validation: Zod (judge structured output via `messages.parse` +
-  `output_config.format`).
+- Validation: Zod (`ScoreSchema.parse` after JSON-parsing the judge response text;
+  the judge uses `messages.create` with a JSON-only system prompt, strips optional
+  markdown fences from the response text, then validates against `ScoreSchema`).
 - Tests: Vitest (unit/component). Playwright deferred.
 - Lint: copied from Doppelscript's web app flat ESLint config
   (`next/core-web-vitals`, security, jsx-a11y, the "use SCSS modules not inline
@@ -145,9 +146,11 @@ Run via `npm run eval`. Flow:
      run = runResearchAgent([{role:'user', content: question}], { sink: collectSink })
      collectSink captures { finalAnswer, toolsUsed[], iterationCount }
 3. judgeResult(item, run):
-     messages.parse({ model: JUDGE_MODEL, system: judgePrompt,
-                      output_config: { format: zodOutputFormat(ScoreSchema) } })
-     rubric + referenceFacts + answer + tool trajectory go in the user turn
+     messages.create({ model: JUDGE_MODEL, system: judgePrompt, messages: [userTurn] })
+     response text is JSON-parsed (stripping optional markdown fences), then
+     validated against ScoreSchema (Zod); rubric + referenceFacts + answer +
+     tool trajectory go in the user turn.
+     Per-item failures are isolated: one bad judge response does not abort the run.
 4. writeReport -> evals/reports/report.json (full) + report.md (human summary)
 ```
 
@@ -245,7 +248,8 @@ chat-demo/
         encodeSseEvent.ts           # event object -> SSE wire string
       eval/
         runEval.ts                  # load dataset, run agent per item (collect sink)
-        judgeResult.ts              # messages.parse + Zod ScoreSchema
+        judgeResult.ts              # messages.create + JSON parse + Zod ScoreSchema
+        runDataset.ts               # sequential runner with per-item failure isolation
         writeReport.ts              # report.md + report.json
     tools/
       searchWikipedia.ts
