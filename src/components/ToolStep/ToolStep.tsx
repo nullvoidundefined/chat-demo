@@ -5,11 +5,12 @@ import styles from './ToolStep.module.scss';
 
 export function ToolStep({ step }: { step: ToolStepData }) {
     const label = describeInput(step.input);
+    const stateClass = step.summary ? styles.done : styles.running;
     return (
-        <div className={styles.step} aria-label={`Tool: ${step.name}`}>
+        <div className={`${styles.step} ${stateClass}`} aria-label={`Tool: ${step.name}`}>
             <span className={styles.name}>{step.name}</span>
             {label ? <span className={styles.input}>{label}</span> : null}
-            <span className={styles.summary}>{step.summary ?? 'running...'}</span>
+            <span className={styles.summary}>{step.summary ?? 'searching...'}</span>
         </div>
     );
 }
