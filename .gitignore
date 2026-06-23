@@ -6,3 +6,6 @@ build/
 .env.local
 evals/reports/
 *.log
+*.tsbuildinfo
+next-env.d.ts
+.superpowers/
