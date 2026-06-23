@@ -16,7 +16,7 @@
         "test": "vitest run",
         "test:e2e": "playwright test",
         "test:watch": "vitest",
-        "eval": "tsx evals/runEval.ts"
+        "eval": "node --env-file-if-exists=.env --import tsx evals/runEval.ts"
     },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.105.0",
