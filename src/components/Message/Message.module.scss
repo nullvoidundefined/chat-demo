@@ -39,6 +39,28 @@
     margin-bottom: 0.6rem;
 }
 
+.thinking {
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    padding: 0.3rem 0.6rem;
+    opacity: 0.6;
+}
+
+.thinkingSummary {
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.thinkingText {
+    margin: 0.4rem 0 0.2rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
 @keyframes rise {
     from {
         opacity: 0;

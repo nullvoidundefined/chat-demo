@@ -7,6 +7,7 @@ export type ChatMessage = {
 };
 
 export type ToolStep = {
+    id: number;
     name: string;
     input: unknown;
     summary: string | null;

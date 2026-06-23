@@ -33,7 +33,7 @@ export function Chat() {
                         Anthropic.
                     </p>
                 ) : (
-                    messages.map((message, index) => <Message key={index} message={message} />)
+                    messages.map((message) => <Message key={message.id} message={message} />)
                 )}
             </div>
             <form className={styles.form} onSubmit={handleSubmit}>
