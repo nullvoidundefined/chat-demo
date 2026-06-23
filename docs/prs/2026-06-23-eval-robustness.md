@@ -17,8 +17,8 @@ aborts a whole Opus-priced eval run, and the spec now matches the real judge.
   continues. `evals/runEval.ts` uses it and prints any failures instead of dying.
 - **Spec alignment:** the design spec said the judge used `messages.parse` +
   `zodOutputFormat` structured output; the implementation uses `messages.create`
-  + JSON parse (fence-stripped) + Zod `ScoreSchema` validation. The spec now
-  describes the actual mechanism and notes the per-item isolation.
+    - JSON parse (fence-stripped) + Zod `ScoreSchema` validation. The spec now
+      describes the actual mechanism and notes the per-item isolation.
 
 ## Architectural decisions
 
